@@ -1,0 +1,631 @@
+// Copyright (c) 2026 OpenAgenet contributors
+//
+// Initial author: JINLIANG XU
+// Email: jlxufly@gmail.com
+
+import fs from "node:fs";
+import path from "node:path";
+import type { DemoNode, DemoResource, DemoScenarioId } from "../shared/types.js";
+import type { DemoEventBus } from "./event-bus.js";
+import {
+  adminToken,
+  buildResourceRegistrationFixture,
+  copyDir,
+  copyGenesisNodeIdentity,
+  createBenchmarkEnvironment,
+  createNatsRuntime,
+  createNodeRuntime,
+  createResourceIdentity,
+  ensureDir,
+  ensurePostgresDatabasesFromConfigs,
+  ensureServiceBinaries,
+  getJson,
+  listDiscoveryCandidates,
+  loadIdentityMaterial,
+  nowIso,
+  persistIdentityMaterial,
+  postJson,
+  readJson,
+  resetDir,
+  rootFixtureRoot,
+  runWithConcurrency,
+  seedRootBulletin,
+  sleep,
+  startNats,
+  startNode,
+  stopNats,
+  stopNode,
+  uniqueRootEventStreamProfile,
+  userAgentFixtureRoot,
+  writeBenchmarkCdnConfig,
+  writeBenchmarkCdnPublisherConfig,
+  writeBenchmarkDiscoveryConfig,
+  writeBenchmarkRegistrarConfig,
+  writeBenchmarkRootConfig,
+  writeGenesisAuthorizationState,
+  writeJson,
+} from "../../../oan-examples/scripts/bench/shared.js";
+import {
+  buildTrustedInvocation,
+  postJsonAllowFailure,
+  sha256Canonical,
+  signValue,
+  startPythonAgent,
+  stopProcessTree,
+  waitForHttpHealth,
+} from "../../../oan-examples/scripts/bench/example-flows.js";
+
+const scenarioIds = new Set(["service-agent", "mixed-four", "mixed-1000"]);
+const demoDomains = ["genesis.openagenet.local", "openagenet.local"];
+
+interface DemoRuntime {
+  rootPort: number;
+  cdnPort: number;
+  publisherPort: number;
+  natsPort: number;
+  registrarPorts: number[];
+  discoveryPorts: number[];
+  serviceAgentPort: number;
+}
+
+const runtime: DemoRuntime = {
+  rootPort: 8500,
+  cdnPort: 8503,
+  publisherPort: 8510,
+  natsPort: Number.parseInt(process.env.OAN_DEMO_NATS_PORT ?? "4522", 10),
+  registrarPorts: [8501, 8502, 8505],
+  discoveryPorts: [8506, 8507],
+  serviceAgentPort: 9001,
+};
+
+type ResourceType = "agent_service" | "skill" | "mcp_server" | "tool_api";
+
+interface DemoContext {
+  scenarioId: DemoScenarioId;
+  environment: ReturnType<typeof createBenchmarkEnvironment>;
+  natsRuntime: ReturnType<typeof createNatsRuntime>;
+  nodes: ReturnType<typeof createNodeRuntime>[];
+  dirs: {
+    root: string;
+    cdn: string;
+    registrars: string[];
+    discoveries: string[];
+    serviceAgent: string;
+    userAgent: string;
+    config: string;
+  };
+  serviceAgent?: any;
+}
+
+export async function runScenario(rawScenarioId: string, bus: DemoEventBus): Promise<void> {
+  if (!scenarioIds.has(rawScenarioId)) {
+    throw new Error(`Unknown scenario: ${rawScenarioId}`);
+  }
+  const scenarioId = rawScenarioId as DemoScenarioId;
+  bus.reset(scenarioId);
+  bus.emit({ kind: "scenario-started", scenarioId, title: scenarioTitle(scenarioId), message: "Preparing local OAN topology" });
+  const context = prepareContext(scenarioId, bus);
+  try {
+    await startContext(context, bus);
+    if (scenarioId === "service-agent") {
+      await runServiceAgentScenario(context, bus);
+    } else if (scenarioId === "mixed-four") {
+      await runMixedFourScenario(context, bus);
+    } else {
+      await runMixed1000Scenario(context, bus);
+    }
+    bus.emit({ kind: "scenario-completed", scenarioId, title: "Scenario completed", message: "All demo checks completed" });
+  } catch (error) {
+    bus.emit({
+      kind: "scenario-failed",
+      scenarioId,
+      title: "Scenario failed",
+      message: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  } finally {
+    await stopContext(context);
+    bus.finish();
+  }
+}
+
+function scenarioTitle(scenarioId: DemoScenarioId): string {
+  if (scenarioId === "service-agent") return "Service Agent registration and trusted connection";
+  if (scenarioId === "mixed-four") return "Four OAN resource types";
+  return "1000 mixed resources pipeline";
+}
+
+function prepareContext(scenarioId: DemoScenarioId, bus: DemoEventBus): DemoContext {
+  const environment = createBenchmarkEnvironment(`oan-demo-${scenarioId}`);
+  const eventProfile = uniqueRootEventStreamProfile(environment.runId, runtime.natsPort);
+  const natsRuntime = createNatsRuntime(environment.pidDir);
+  const config = path.join(environment.workDir, "config");
+  const root = path.join(environment.workDir, "root");
+  const cdn = path.join(environment.workDir, "cdn");
+  const registrars = ["registrar-a", "registrar-b", "registrar-c"].map((name) => path.join(environment.workDir, name));
+  const discoveries = ["discovery-a", "discovery-b"].map((name) => path.join(environment.workDir, name));
+  const serviceAgent = path.join(environment.workDir, "data", "demo-service-agent");
+  const userAgent = path.join(environment.workDir, "data", "user-agent");
+  ensureDir(config);
+
+  const rootIdentity = copyGenesisNodeIdentity("genesis-root", root, { endpoint: `http://localhost:${runtime.rootPort}` });
+  const registrarIdentities = registrars.map((dir, index) =>
+    copyGenesisNodeIdentity(`genesis-registrar-${index + 1}`, dir, { endpoint: `http://localhost:${runtime.registrarPorts[index]}` }),
+  );
+  const discoveryIdentities = discoveries.map((dir, index) =>
+    copyGenesisNodeIdentity(`genesis-discovery-${index + 1}`, dir, { endpoint: `http://localhost:${runtime.discoveryPorts[index]}` }),
+  );
+  seedRootBulletin(rootFixtureRoot, root, { cdnPort: runtime.cdnPort });
+  writeGenesisAuthorizationState(root, { registrarDirs: registrars, discoveryDirs: discoveries, authorizedDomains: demoDomains });
+  writeJson(path.join(root, "request-nonces.json"), { nonces: {} });
+
+  for (const dir of [
+    path.join(root, "archive"),
+    path.join(root, "indexes"),
+    path.join(root, "queues"),
+    path.join(root, "resource-packages"),
+    path.join(root, "resources"),
+    ...registrars.flatMap((dir) => [path.join(dir, "drafts"), path.join(dir, "records"), path.join(dir, "resource-records")]),
+    ...discoveries.map((dir) => path.join(dir, "index")),
+    path.join(cdn, "documents"),
+    path.join(cdn, "metadata"),
+    path.join(cdn, "packages"),
+    path.join(cdn, "resources"),
+    serviceAgent,
+    userAgent,
+  ]) {
+    resetDir(dir);
+  }
+  for (const dir of discoveries) writeJson(path.join(dir, "index", "capabilities.json"), []);
+  writeJson(path.join(cdn, "manifest.json"), { version: "0.1.0", generatedAt: nowIso(), rootDid: "", packages: [] });
+  mirrorInfrastructureDataForAgents(environment.workDir, { rootDir: root, registrarDir: registrars[0], discoveryDir: discoveries[0] });
+  copyDir(userAgentFixtureRoot, userAgent);
+  issueUserAgentCredential(userAgent, registrarIdentities[0]);
+
+  writeBenchmarkRootConfig(path.join(config, "root.toml"), runtime, rootIdentity.did, { events: eventProfile });
+  writeBenchmarkRegistrarConfig(path.join(config, "registrar-a.toml"), { ...runtime, registrarPort: runtime.registrarPorts[0] }, rootIdentity.did, "registrar-a");
+  writeBenchmarkRegistrarConfig(path.join(config, "registrar-b.toml"), { ...runtime, registrarPort: runtime.registrarPorts[1] }, rootIdentity.did, "registrar-b");
+  writeBenchmarkRegistrarConfig(path.join(config, "registrar-c.toml"), { ...runtime, registrarPort: runtime.registrarPorts[2] }, rootIdentity.did, "registrar-c");
+  writeBenchmarkDiscoveryConfig(path.join(config, "discovery-a.toml"), { ...runtime, discoveryPort: runtime.discoveryPorts[0] }, "discovery-a");
+  writeBenchmarkDiscoveryConfig(path.join(config, "discovery-b.toml"), { ...runtime, discoveryPort: runtime.discoveryPorts[1] }, "discovery-b");
+  writeBenchmarkCdnConfig(path.join(config, "cdn.toml"), runtime, rootIdentity.did);
+  writeBenchmarkCdnPublisherConfig(path.join(config, "cdn-publisher.toml"), runtime, {
+    events: eventProfile,
+    rootKeysDirRelative: "../root/keys",
+  });
+  ensurePostgresDatabasesFromConfigs([
+    path.join(config, "root.toml"),
+    path.join(config, "registrar-a.toml"),
+    path.join(config, "registrar-b.toml"),
+    path.join(config, "registrar-c.toml"),
+    path.join(config, "discovery-a.toml"),
+    path.join(config, "discovery-b.toml"),
+    path.join(config, "cdn.toml"),
+  ]);
+
+  const nodes = [
+    createNodeRuntime(environment.pidDir, "root", "root-node", path.join(config, "root.toml"), runtime.rootPort),
+    createNodeRuntime(environment.pidDir, "registrar-a", "registrar-node", path.join(config, "registrar-a.toml"), runtime.registrarPorts[0]),
+    createNodeRuntime(environment.pidDir, "registrar-b", "registrar-node", path.join(config, "registrar-b.toml"), runtime.registrarPorts[1]),
+    createNodeRuntime(environment.pidDir, "registrar-c", "registrar-node", path.join(config, "registrar-c.toml"), runtime.registrarPorts[2]),
+    createNodeRuntime(environment.pidDir, "discovery-a", "discovery-node", path.join(config, "discovery-a.toml"), runtime.discoveryPorts[0]),
+    createNodeRuntime(environment.pidDir, "discovery-b", "discovery-node", path.join(config, "discovery-b.toml"), runtime.discoveryPorts[1]),
+    createNodeRuntime(environment.pidDir, "cdn", "cdn-node", path.join(config, "cdn.toml"), runtime.cdnPort),
+    createNodeRuntime(environment.pidDir, "cdn-publisher", "cdn-publisher", path.join(config, "cdn-publisher.toml"), runtime.publisherPort),
+  ];
+
+  bus.setTopology(
+    [
+      node("root", "Root", "root", rootIdentity.did, runtime.rootPort),
+      ...registrarIdentities.map((identity, index) => node(`registrar-${index + 1}`, `Registrar ${index + 1}`, "registrar", identity.did, runtime.registrarPorts[index])),
+      node("cdn", "CDN", "cdn", undefined, runtime.cdnPort),
+      ...discoveryIdentities.map((identity, index) =>
+        node(`discovery-${index + 1}`, `Discovery ${index + 1}`, "discovery", identity.did, runtime.discoveryPorts[index], demoDomains),
+      ),
+      node("service-agent", "Service Agent", "service-agent", undefined, runtime.serviceAgentPort),
+      node("user-agent", "User Agent", "user-agent", undefined, undefined),
+    ],
+    scenarioId,
+  );
+
+  addNodeArtifacts(bus, scenarioId, "root", root);
+  registrars.forEach((dir, index) => addNodeArtifacts(bus, scenarioId, `registrar-${index + 1}`, dir));
+  discoveries.forEach((dir, index) => addNodeArtifacts(bus, scenarioId, `discovery-${index + 1}`, dir));
+
+  return { scenarioId, environment, natsRuntime, nodes, dirs: { root, cdn, registrars, discoveries, serviceAgent, userAgent, config } };
+}
+
+function node(id: string, label: string, kind: DemoNode["kind"], did?: string, port?: number, domains?: string[]): DemoNode {
+  return {
+    id,
+    label,
+    kind,
+    did,
+    endpoint: port ? `http://127.0.0.1:${port}` : undefined,
+    domains,
+    status: "idle",
+  };
+}
+
+async function startContext(context: DemoContext, bus: DemoEventBus): Promise<void> {
+  ensureServiceBinaries(["root-node", "registrar-node", "discovery-node", "cdn-node", "cdn-publisher"]);
+  await startNats(context.natsRuntime, runtime.natsPort);
+  bus.emit({ kind: "node-started", scenarioId: context.scenarioId, title: "NATS JetStream running", message: `Port ${runtime.natsPort}` });
+  for (const nodeRuntime of context.nodes) {
+    await startNode(nodeRuntime);
+    bus.updateNode(mapRuntimeNameToNodeId(nodeRuntime.name), { status: "running" }, context.scenarioId);
+  }
+  if (context.scenarioId === "service-agent") {
+    context.serviceAgent = startPythonAgent(
+      "service-agent-python",
+      ["run", "--project", "agents/service-agent-python", "python", "-m", "service_agent.main"],
+      context.environment.pidDir,
+      context.environment.workDir,
+    );
+    await waitForHttpHealth("service-agent-python", runtime.serviceAgentPort);
+    bus.updateNode("service-agent", { status: "running" }, context.scenarioId);
+  }
+}
+
+async function stopContext(context: DemoContext): Promise<void> {
+  if (context.serviceAgent?.pid) stopProcessTree(context.serviceAgent.pid);
+  for (const nodeRuntime of [...context.nodes].reverse()) {
+    await stopNode(nodeRuntime);
+  }
+  await stopNats(context.natsRuntime);
+}
+
+function mapRuntimeNameToNodeId(name: string): string {
+  if (name === "registrar-a") return "registrar-1";
+  if (name === "registrar-b") return "registrar-2";
+  if (name === "registrar-c") return "registrar-3";
+  if (name === "discovery-a") return "discovery-1";
+  if (name === "discovery-b") return "discovery-2";
+  if (name === "root") return "root";
+  if (name === "cdn") return "cdn";
+  return name;
+}
+
+async function runServiceAgentScenario(context: DemoContext, bus: DemoEventBus): Promise<void> {
+  const registrar = loadIdentityMaterial(context.dirs.registrars[0]);
+  const resource = createResourceIdentity({
+    semanticCode: "AGDM",
+    resourceType: "agent_service",
+    capabilityTags: ["openagenet.local", "trusted-demo", "gbt4754-2017.01"],
+    serviceEndpoint: `http://127.0.0.1:${runtime.serviceAgentPort}/agent/invoke`,
+    label: "Demo Service Agent",
+    description: "Service Agent used by the OAN visual demo.",
+    protocol: "http",
+    serviceType: "AgentService",
+    identityType: "service-agent",
+    useCaseExamples: ["Discover through two Discovery nodes.", "Exchange VC material and establish a trusted call."],
+  });
+  persistIdentityMaterial(context.dirs.serviceAgent, resource);
+  const registration = buildResourceRegistrationFixture(resource, {
+    draftId: "demo-service-agent",
+    registrarDid: registrar.did,
+    resourceType: "agent_service",
+    metadata: {
+      name: "Demo Service Agent",
+      description: "Visual demo Service Agent registration",
+      capabilityTags: ["openagenet.local", "trusted-demo", "gbt4754-2017.01"],
+    },
+  });
+  const demoResource = toDemoResource(resource.did, "agent_service", "Demo Service Agent", ["openagenet.local", "trusted-demo"], "created");
+  bus.upsertResource(demoResource, "resource-created", context.scenarioId, "Service DID Document prepared");
+  bus.addArtifact({ id: `${resource.did}:did`, title: "Service Agent DID Document", owner: "service-agent", resourceDid: resource.did, kind: "did-document", value: resource.didDocument });
+  bus.addArtifact({ id: `${resource.did}:key`, title: "Service Agent private key", owner: "service-agent", resourceDid: resource.did, kind: "private-key", value: resource.privateKeyJwk, sensitive: true });
+  bus.addArtifact({ id: `${resource.did}:registration`, title: "Registrar submission", owner: "registrar-1", resourceDid: resource.did, kind: "registration", value: registration });
+
+  const registrarAccepted = [0, 0, 0];
+  await registerResource(context, bus, registration, demoResource, 1, 0, registrarAccepted);
+  await queryAndConnect(context, bus, resource.did);
+}
+
+async function runMixedFourScenario(context: DemoContext, bus: DemoEventBus): Promise<void> {
+  const types: ResourceType[] = ["agent_service", "skill", "mcp_server", "tool_api"];
+  const resources = types.map((type, index) => createTypedResource(type, index));
+  const registrarAccepted = [0, 0, 0];
+  for (let index = 0; index < resources.length; index++) {
+    const resource = resources[index];
+    const registrarIndex = index % context.dirs.registrars.length;
+    const registrar = loadIdentityMaterial(context.dirs.registrars[registrarIndex]);
+    persistIdentityMaterial(path.join(context.environment.workDir, "data", `resource-${index}`), resource);
+    const registration = buildResourceRegistrationFixture(resource, {
+      draftId: `demo-${resource.did.slice(-6)}`,
+      registrarDid: registrar.did,
+      resourceType: resource.didDocument.oanMetadata.resourceType,
+      metadata: {
+        name: resource.didDocument.oanMetadata.resourceDescription.name,
+        description: resource.didDocument.oanMetadata.resourceDescription.description,
+        capabilityTags: resource.didDocument.oanMetadata.capabilityTags,
+      },
+    });
+    const demoResource = toDemoResource(
+      resource.did,
+      resource.didDocument.oanMetadata.resourceType,
+      resource.didDocument.oanMetadata.resourceDescription.name,
+      resource.didDocument.oanMetadata.capabilityTags,
+      "created",
+    );
+    bus.upsertResource(demoResource, "resource-created", context.scenarioId, `${demoResource.name} DID Document prepared`);
+    bus.addArtifact({ id: `${resource.did}:did`, title: `${demoResource.name} DID Document`, owner: `resource-${index}`, resourceDid: resource.did, kind: "did-document", value: resource.didDocument });
+    bus.addArtifact({ id: `${resource.did}:key`, title: `${demoResource.name} private key`, owner: `resource-${index}`, resourceDid: resource.did, kind: "private-key", value: resource.privateKeyJwk, sensitive: true });
+    await registerResource(context, bus, registration, demoResource, index + 1, registrarIndex, registrarAccepted);
+  }
+  for (const discoveryPort of runtime.discoveryPorts) {
+    const response = await postJson<any>(
+      `http://127.0.0.1:${discoveryPort}/discovery/resources/query`,
+      { capabilityTags: ["openagenet.local"], limit: 10 },
+      { timeoutMs: 60_000 },
+    );
+    bus.addArtifact({
+      id: `discovery-${discoveryPort}:mixed-query`,
+      title: `Discovery ${discoveryPort} mixed query response`,
+      owner: `discovery-${runtime.discoveryPorts.indexOf(discoveryPort) + 1}`,
+      kind: "discovery-response",
+      value: response,
+    });
+    bus.emit({
+      kind: "user-discovered",
+      scenarioId: context.scenarioId,
+      title: `User Agent discovered ${listDiscoveryCandidates(response).length} resources`,
+      message: `Discovery port ${discoveryPort}`,
+      stats: { discoveryPort, candidates: listDiscoveryCandidates(response) },
+    });
+  }
+}
+
+async function runMixed1000Scenario(context: DemoContext, bus: DemoEventBus): Promise<void> {
+  const total = 1000;
+  const types: ResourceType[] = ["agent_service", "skill", "mcp_server", "tool_api"];
+  bus.emit({ kind: "log", scenarioId: context.scenarioId, title: "Pressure registration started", message: `${total} mixed resources across 3 Registrars` });
+  let accepted = 0;
+  const registrarAccepted = [0, 0, 0];
+  let sampling = true;
+  const sampler = samplePressureStats(context, bus, () => accepted, total, registrarAccepted, () => sampling);
+  try {
+    await runWithConcurrency(Array.from({ length: total }, (_, index) => index), 48, async (index) => {
+      const type = types[index % types.length];
+      const resource = createTypedResource(type, index);
+      const registrarIndex = index % context.dirs.registrars.length;
+      const registrar = loadIdentityMaterial(context.dirs.registrars[registrarIndex]);
+      const registration = buildResourceRegistrationFixture(resource, {
+        draftId: `pressure-${index}`,
+        registrarDid: registrar.did,
+        resourceType: type,
+        metadata: {
+          name: `Pressure ${type} ${index}`,
+          description: `OAN demo pressure resource ${index}`,
+          capabilityTags: ["openagenet.local", "pressure-demo", `resource-${index % 20}`, type],
+        },
+      });
+      await postJson(`http://127.0.0.1:${runtime.registrarPorts[registrarIndex]}/resources/register`, registration, { timeoutMs: 180_000 });
+      accepted += 1;
+      registrarAccepted[registrarIndex] += 1;
+    });
+  } finally {
+    sampling = false;
+    await sampler;
+  }
+  await waitForPressurePropagation(context, bus, accepted, total, registrarAccepted, 240_000);
+  await emitPressureStats(context, bus, total, total, registrarAccepted);
+}
+
+async function samplePressureStats(
+  context: DemoContext,
+  bus: DemoEventBus,
+  accepted: () => number,
+  total: number,
+  registrarAccepted: number[],
+  isSampling: () => boolean,
+): Promise<void> {
+  while (isSampling()) {
+    await emitPressureStats(context, bus, accepted(), total, [...registrarAccepted]);
+    await sleep(200);
+  }
+  await emitPressureStats(context, bus, accepted(), total, [...registrarAccepted]);
+}
+
+async function waitForPressurePropagation(
+  context: DemoContext,
+  bus: DemoEventBus,
+  accepted: number,
+  total: number,
+  registrarAccepted: number[],
+  timeoutMs: number,
+  targets: { root?: boolean; cdn?: boolean; discovery?: boolean } = { root: true, cdn: true, discovery: true },
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const stats = await emitPressureStats(context, bus, accepted, total, registrarAccepted);
+    const rootReached = !targets.root || Number(stats.rootLatest) >= total;
+    const cdnReached = !targets.cdn || Number(stats.cdnPublished) >= total;
+    const discoveryReached = !targets.discovery || (Number(stats.discoveryA) >= total && Number(stats.discoveryB) >= total);
+    if (rootReached && cdnReached && discoveryReached) {
+      return;
+    }
+    await sleep(200);
+  }
+  throw new Error(`Pressure propagation did not reach ${total} resources within ${timeoutMs}ms`);
+}
+
+async function registerResource(
+  context: DemoContext,
+  bus: DemoEventBus,
+  registration: any,
+  resource: DemoResource,
+  expectedCount: number,
+  registrarIndex: number,
+  registrarAccepted: number[],
+): Promise<void> {
+  const registrarPort = runtime.registrarPorts[registrarIndex];
+  const routedResource = { ...resource, registrarNode: `registrar-${registrarIndex + 1}` };
+  bus.upsertResource(withStage(routedResource, "registrar"), "resource-registered", context.scenarioId, `${resource.name} submitted to Registrar ${registrarIndex + 1}`);
+  await postJson(`http://127.0.0.1:${registrarPort}/resources/register`, registration, { timeoutMs: 120_000 });
+  registrarAccepted[registrarIndex] += 1;
+  const accepted = registrarAccepted.reduce((sum, count) => sum + count, 0);
+  await waitForPressurePropagation(context, bus, accepted, expectedCount, registrarAccepted, 120_000, { root: true });
+  bus.upsertResource(withStage(routedResource, "root"), "root-verified", context.scenarioId, "Root verified and archived resource package");
+  const rootPackage = await getJson<any>(`http://127.0.0.1:${runtime.rootPort}/root/resources/${encodeURIComponent(resource.did)}`);
+  bus.addArtifact({ id: `${resource.did}:root-package`, title: "Root resource package", owner: "root", resourceDid: resource.did, kind: "package", value: rootPackage });
+  await waitForPressurePropagation(context, bus, accepted, expectedCount, registrarAccepted, 120_000, { root: true, cdn: true });
+  bus.upsertResource(withStage(routedResource, "cdn"), "cdn-published", context.scenarioId, "CDN published Root-approved package");
+  const cdnPackage = await getJson<any>(`http://127.0.0.1:${runtime.cdnPort}/cdn/resources/${encodeURIComponent(resource.did)}`);
+  bus.addArtifact({ id: `${resource.did}:cdn-package`, title: "CDN resource package", owner: "cdn", resourceDid: resource.did, kind: "package", value: cdnPackage });
+  await waitForPressurePropagation(context, bus, accepted, expectedCount, registrarAccepted, 120_000);
+  bus.upsertResource(withStage(routedResource, "discovery"), "discovery-indexed", context.scenarioId, "Both Discovery nodes fetched and indexed the resource");
+}
+
+async function queryAndConnect(context: DemoContext, bus: DemoEventBus, resourceDid: string): Promise<void> {
+  const discoveryResponses = [];
+  for (const discoveryPort of runtime.discoveryPorts) {
+    const response = await postJson<any>(
+      `http://127.0.0.1:${discoveryPort}/discovery/resources/query`,
+      { capabilityTags: ["trusted-demo"], resourceType: "agent_service", protocol: "http", limit: 5 },
+      { timeoutMs: 60_000 },
+    );
+    discoveryResponses.push(response);
+    bus.addArtifact({
+      id: `${resourceDid}:discovery-${discoveryPort}`,
+      title: `Discovery ${discoveryPort} response`,
+      owner: `discovery-${runtime.discoveryPorts.indexOf(discoveryPort) + 1}`,
+      resourceDid,
+      kind: "discovery-response",
+      value: response,
+    });
+    bus.emit({ kind: "user-discovered", scenarioId: context.scenarioId, title: "User Agent discovered Service Agent", resourceDid });
+  }
+  const invocation = buildTrustedInvocation(context.environment.workDir, resourceDid, discoveryResponses[0]);
+  const result = await postJsonAllowFailure(`http://127.0.0.1:${runtime.serviceAgentPort}/agent/invoke`, invocation, 60_000);
+  if (result.status !== 200) throw new Error(`Trusted invocation failed: ${JSON.stringify(result.body)}`);
+  bus.addArtifact({ id: `${resourceDid}:invocation`, title: "Trusted invocation envelope", owner: "user-agent", resourceDid, kind: "vc", value: invocation });
+  bus.addArtifact({ id: `${resourceDid}:response`, title: "Service Agent signed response", owner: "service-agent", resourceDid, kind: "summary", value: result.body });
+  bus.emit({ kind: "trusted-connected", scenarioId: context.scenarioId, title: "VC exchange verified, business connection established", resourceDid });
+}
+
+async function emitPressureStats(context: DemoContext, bus: DemoEventBus, accepted: number, total: number, registrarAccepted: number[]): Promise<Record<string, unknown>> {
+  let rootStatus: any = {};
+  let cdnStatus: any = {};
+  let discoveryCounts: number[] = [];
+  try {
+    rootStatus = await getJson<any>(`http://127.0.0.1:${runtime.rootPort}/root/status`);
+    cdnStatus = await getJson<any>(`http://127.0.0.1:${runtime.cdnPort}/cdn/status`);
+    discoveryCounts = await Promise.all(
+      runtime.discoveryPorts.map(async (port) => {
+        const status = await getJson<any>(`http://127.0.0.1:${port}/discovery/index/stats`);
+        return Number(status.indexedResourceCount ?? status.indexed_resource_count ?? status.resourceCount ?? 0);
+      }),
+    );
+  } catch {
+    // Status endpoints can be momentarily busy during pressure bursts.
+  }
+  const stats = {
+    accepted,
+    total,
+    registrarAccepted: {
+      "registrar-1": registrarAccepted[0] ?? 0,
+      "registrar-2": registrarAccepted[1] ?? 0,
+      "registrar-3": registrarAccepted[2] ?? 0,
+    },
+    rootLatest: rootStatus.latestVersionCount ?? 0,
+    cdnPublished: cdnStatus.resourceCount ?? 0,
+    discoveryA: discoveryCounts[0] ?? 0,
+    discoveryB: discoveryCounts[1] ?? 0,
+  };
+  bus.setStats(stats);
+  const discoveryMin = Math.min(stats.discoveryA, stats.discoveryB);
+  bus.emit({
+    kind: "pressure-progress",
+    scenarioId: context.scenarioId,
+    title: `Registrar accepted ${accepted}/${total}; Discovery indexed ${discoveryMin}/${total}`,
+    message: `Root ${stats.rootLatest}/${total}, CDN ${stats.cdnPublished}/${total}, Discovery 1 ${stats.discoveryA}/${total}, Discovery 2 ${stats.discoveryB}/${total}`,
+    stats,
+  });
+  return stats;
+}
+
+function createTypedResource(type: ResourceType, index: number): ReturnType<typeof createResourceIdentity> {
+  const semantic = type === "agent_service" ? "AGDM" : type === "skill" ? "SKDM" : type === "mcp_server" ? "MCDM" : "TLDM";
+  return createResourceIdentity({
+    semanticCode: semantic,
+    resourceType: type,
+    capabilityTags: ["openagenet.local", "mixed-demo", type, `resource-${index % 12}`],
+    serviceEndpoint: `http://127.0.0.1:${9600 + index}/resource/${type}`,
+    label: `Demo ${type} ${index}`,
+    description: `OAN visual demo ${type} resource.`,
+    protocol: type === "mcp_server" ? "mcp" : "http",
+    serviceType: type === "skill" ? "OANSkillManifest" : type === "mcp_server" ? "OANMCPServer" : type === "tool_api" ? "OANToolAPI" : "AgentService",
+    identityType: type,
+    useCaseExamples: [`Discover and verify ${type} through OAN.`],
+  });
+}
+
+function toDemoResource(did: string, type: ResourceType, name: string, tags: string[], stage: DemoResource["stage"]): DemoResource {
+  return { did, type, name, tags, stage };
+}
+
+function withStage(resource: DemoResource, stage: DemoResource["stage"]): DemoResource {
+  return { ...resource, stage };
+}
+
+function addNodeArtifacts(bus: DemoEventBus, scenarioId: DemoScenarioId, owner: string, dir: string): void {
+  const didPath = path.join(dir, "did-document.json");
+  const vcPath = path.join(dir, "root-authorization-vc.json");
+  const keyPath = path.join(dir, "private-key.jwk.json");
+  if (fs.existsSync(didPath)) {
+    const did = readJson<any>(didPath);
+    bus.addArtifact({ id: `${owner}:did`, title: `${owner} DID Document`, owner, kind: "did-document", value: did }, scenarioId);
+  }
+  if (fs.existsSync(vcPath)) {
+    bus.addArtifact({ id: `${owner}:vc`, title: `${owner} Root authorization VC`, owner, kind: "vc", value: readJson(vcPath) }, scenarioId);
+  }
+  if (fs.existsSync(keyPath)) {
+    bus.addArtifact({ id: `${owner}:key`, title: `${owner} private key`, owner, kind: "private-key", value: readJson(keyPath), sensitive: true }, scenarioId);
+  }
+}
+
+function issueUserAgentCredential(userAgentDir: string, registrar: ReturnType<typeof loadIdentityMaterial>): void {
+  const userDidDocument = readJson<Record<string, any>>(path.join(userAgentDir, "did-document.json"));
+  const issuedAt = "2026-06-04T00:00:00Z";
+  const credential = {
+    id: "urn:oan:credential:user-agent-registration:genesis-registrar:v1",
+    type: "UserAgentRegistrationCredential",
+    issuer: registrar.did,
+    subject: String(userDidDocument.id),
+    status: "active",
+    issuedAt,
+    expiresAt: null,
+    claims: {
+      registered: true,
+      identityType: "user-agent",
+      didDocumentHash: `sha256:${sha256Canonical(userDidDocument)}`,
+      capabilityTags:
+        userDidDocument.oanMetadata?.resourceDescription?.capabilityTags ??
+        userDidDocument.oanMetadata?.agentDescription?.capabilityTags ??
+        [],
+      allowedInvocation: ["trusted-hello-demo", "trusted-negative-cases"],
+    },
+    proofCreator: registrar.keyId,
+  };
+  writeJson(
+    path.join(userAgentDir, "credentials", "user-agent-registration.json"),
+    signValue(credential, { ...registrar, cryptoSuite: "Ed25519Sha256" }, "assertionMethod"),
+  );
+}
+
+function mirrorInfrastructureDataForAgents(
+  workDir: string,
+  dirs: { rootDir: string; registrarDir: string; discoveryDir: string },
+): void {
+  const dataRoot = path.join(workDir, "data");
+  for (const [name, source] of [
+    ["root", dirs.rootDir],
+    ["registrar", dirs.registrarDir],
+    ["discovery", dirs.discoveryDir],
+  ] as const) {
+    const target = path.join(dataRoot, name);
+    resetDir(target);
+    copyDir(source, target);
+  }
+}
