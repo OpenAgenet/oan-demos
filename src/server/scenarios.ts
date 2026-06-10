@@ -4,12 +4,14 @@
 // Email: jlxufly@gmail.com
 
 import fs from "node:fs";
+import crypto from "node:crypto";
 import path from "node:path";
 import type { DemoNode, DemoResource, DemoScenarioId } from "../shared/types.js";
 import type { DemoEventBus } from "./event-bus.js";
 import {
   adminToken,
   buildResourceRegistrationFixture,
+  canonicalJson,
   copyDir,
   copyGenesisNodeIdentity,
   createBenchmarkEnvironment,
@@ -93,6 +95,7 @@ interface DemoContext {
     serviceAgent: string;
     userAgent: string;
     config: string;
+    demoArtifacts: string;
   };
   serviceAgent?: any;
 }
@@ -152,7 +155,7 @@ export async function runScenario(rawScenarioId: string, bus: DemoEventBus): Pro
 }
 
 function scenarioTitle(scenarioId: DemoScenarioId): string {
-  if (scenarioId === "service-agent") return "Service Agent registration and trusted connection";
+  if (scenarioId === "service-agent") return "One Agent registration and trusted connection";
   if (scenarioId === "mixed-four") return "Four OAN resource types";
   if (scenarioId === "authorization-history") return "Chain authorization history replay";
   return "1000 mixed resources pipeline";
@@ -314,6 +317,7 @@ function prepareContext(scenarioId: DemoScenarioId, bus: DemoEventBus): DemoCont
   const discoveries = ["discovery-a", "discovery-b"].map((name) => path.join(environment.workDir, name));
   const serviceAgent = path.join(environment.workDir, "data", "demo-service-agent");
   const userAgent = path.join(environment.workDir, "data", "user-agent");
+  const demoArtifacts = path.join(environment.workDir, "demo-artifacts");
   ensureDir(config);
 
   const rootIdentity = copyGenesisNodeIdentity("genesis-root", root, { endpoint: `http://localhost:${runtime.rootPort}` });
@@ -339,6 +343,7 @@ function prepareContext(scenarioId: DemoScenarioId, bus: DemoEventBus): DemoCont
     path.join(cdn, "metadata"),
     path.join(cdn, "packages"),
     path.join(cdn, "resources"),
+    demoArtifacts,
     serviceAgent,
     userAgent,
   ]) {
@@ -400,7 +405,14 @@ function prepareContext(scenarioId: DemoScenarioId, bus: DemoEventBus): DemoCont
   registrars.forEach((dir, index) => addNodeArtifacts(bus, scenarioId, `registrar-${index + 1}`, dir));
   discoveries.forEach((dir, index) => addNodeArtifacts(bus, scenarioId, `discovery-${index + 1}`, dir));
 
-  return { scenarioId, environment, natsRuntime, nodes, dirs: { root, cdn, registrars, discoveries, serviceAgent, userAgent, config } };
+  writeJson(path.join(demoArtifacts, "README.json"), {
+    title: "OAN demo artifacts",
+    note: "DID documents, registration credentials, Root/CDN packages, and VC exchange envelopes captured for demo review.",
+    generatedAt: nowIso(),
+    scenarioId,
+  });
+
+  return { scenarioId, environment, natsRuntime, nodes, dirs: { root, cdn, registrars, discoveries, serviceAgent, userAgent, config, demoArtifacts } };
 }
 
 function node(id: string, label: string, kind: DemoNode["kind"], did?: string, port?: number, domains?: string[]): DemoNode {
@@ -419,9 +431,10 @@ async function startContext(context: DemoContext, bus: DemoEventBus): Promise<vo
   ensureServiceBinaries(["root-node", "registrar-node", "discovery-node", "cdn-node", "cdn-publisher"]);
   await startNats(context.natsRuntime, runtime.natsPort);
   bus.emit({ kind: "node-started", scenarioId: context.scenarioId, title: "NATS JetStream running", message: `Port ${runtime.natsPort}` });
-  for (const nodeRuntime of context.nodes) {
-    await startNode(nodeRuntime);
-    bus.updateNode(mapRuntimeNameToNodeId(nodeRuntime.name), { status: "running" }, context.scenarioId);
+  if (context.scenarioId === "service-agent") {
+    await startNodesSerially(context, bus);
+  } else {
+    await startNodesInPhases(context, bus);
   }
   if (context.scenarioId === "service-agent") {
     context.serviceAgent = startPythonAgent(
@@ -433,6 +446,27 @@ async function startContext(context: DemoContext, bus: DemoEventBus): Promise<vo
     await waitForHttpHealth("service-agent-python", runtime.serviceAgentPort);
     bus.updateNode("service-agent", { status: "running" }, context.scenarioId);
   }
+}
+
+async function startNodesSerially(context: DemoContext, bus: DemoEventBus): Promise<void> {
+  for (const nodeRuntime of context.nodes) {
+    await startNode(nodeRuntime);
+    bus.updateNode(mapRuntimeNameToNodeId(nodeRuntime.name), { status: "running" }, context.scenarioId);
+  }
+}
+
+async function startNodesInPhases(context: DemoContext, bus: DemoEventBus): Promise<void> {
+  const publisherNodes = context.nodes.filter((nodeRuntime) => nodeRuntime.name === "cdn-publisher");
+  const infrastructureNodes = context.nodes.filter((nodeRuntime) => nodeRuntime.name !== "cdn-publisher");
+  await Promise.all(infrastructureNodes.map((nodeRuntime) => startNodeAndMarkReady(context, bus, nodeRuntime)));
+  for (const nodeRuntime of publisherNodes) {
+    await startNodeAndMarkReady(context, bus, nodeRuntime);
+  }
+}
+
+async function startNodeAndMarkReady(context: DemoContext, bus: DemoEventBus, nodeRuntime: DemoContext["nodes"][number]): Promise<void> {
+  await startNode(nodeRuntime);
+  bus.updateNode(mapRuntimeNameToNodeId(nodeRuntime.name), { status: "running" }, context.scenarioId);
 }
 
 async function stopContext(context: DemoContext): Promise<void> {
@@ -484,10 +518,12 @@ async function runServiceAgentScenario(context: DemoContext, bus: DemoEventBus):
   bus.addArtifact({ id: `${resource.did}:did`, title: "Service Agent DID Document", owner: "service-agent", resourceDid: resource.did, kind: "did-document", value: resource.didDocument });
   bus.addArtifact({ id: `${resource.did}:key`, title: "Service Agent private key", owner: "service-agent", resourceDid: resource.did, kind: "private-key", value: resource.privateKeyJwk, sensitive: true });
   bus.addArtifact({ id: `${resource.did}:registration`, title: "Registrar submission", owner: "registrar-1", resourceDid: resource.did, kind: "registration", value: registration });
+  writeResourceArtifact(context, demoResource, "did-document.json", resource.didDocument);
+  writeResourceArtifact(context, demoResource, "registration-submission.json", registration);
 
   const registrarAccepted = [0, 0, 0];
   await registerResource(context, bus, registration, demoResource, 1, 0, registrarAccepted);
-  await queryAndConnect(context, bus, resource.did);
+  await queryAndConnect(context, bus, demoResource);
 }
 
 async function runMixedFourScenario(context: DemoContext, bus: DemoEventBus): Promise<void> {
@@ -519,6 +555,9 @@ async function runMixedFourScenario(context: DemoContext, bus: DemoEventBus): Pr
     bus.upsertResource(demoResource, "resource-created", context.scenarioId, `${demoResource.name} DID Document prepared`);
     bus.addArtifact({ id: `${resource.did}:did`, title: `${demoResource.name} DID Document`, owner: `resource-${index}`, resourceDid: resource.did, kind: "did-document", value: resource.didDocument });
     bus.addArtifact({ id: `${resource.did}:key`, title: `${demoResource.name} private key`, owner: `resource-${index}`, resourceDid: resource.did, kind: "private-key", value: resource.privateKeyJwk, sensitive: true });
+    bus.addArtifact({ id: `${resource.did}:registration`, title: `${demoResource.name} registrar submission`, owner: `registrar-${registrarIndex + 1}`, resourceDid: resource.did, kind: "registration", value: registration });
+    writeResourceArtifact(context, demoResource, "did-document.json", resource.didDocument);
+    writeResourceArtifact(context, demoResource, "registration-submission.json", registration);
     await registerResource(context, bus, registration, demoResource, index + 1, registrarIndex, registrarAccepted);
   }
   for (const discoveryPort of runtime.discoveryPorts) {
@@ -630,22 +669,41 @@ async function registerResource(
   const registrarPort = runtime.registrarPorts[registrarIndex];
   const routedResource = { ...resource, registrarNode: `registrar-${registrarIndex + 1}` };
   bus.upsertResource(withStage(routedResource, "registrar"), "resource-registered", context.scenarioId, `${resource.name} submitted to Registrar ${registrarIndex + 1}`);
-  await postJson(`http://127.0.0.1:${registrarPort}/resources/register`, registration, { timeoutMs: 120_000 });
+  const registrarResponse = await postJson<any>(`http://127.0.0.1:${registrarPort}/resources/register`, registration, { timeoutMs: 120_000 });
+  if (registrarResponse?.registrationCredential) {
+    if (resource.type === "agent_service" && context.scenarioId === "service-agent") {
+      const serviceCredentialDir = path.join(context.dirs.serviceAgent, "credentials");
+      ensureDir(serviceCredentialDir);
+      writeJson(path.join(serviceCredentialDir, "resource-registration-vc.json"), registrarResponse.registrationCredential);
+    }
+    bus.addArtifact({
+      id: `${resource.did}:registration-vc`,
+      title: "Registrar-issued resource registration VC",
+      owner: `registrar-${registrarIndex + 1}`,
+      resourceDid: resource.did,
+      kind: "vc",
+      value: registrarResponse.registrationCredential,
+    });
+    writeResourceArtifact(context, resource, "resource-registration-vc.json", registrarResponse.registrationCredential);
+  }
   registrarAccepted[registrarIndex] += 1;
   const accepted = registrarAccepted.reduce((sum, count) => sum + count, 0);
   await waitForPressurePropagation(context, bus, accepted, expectedCount, registrarAccepted, 120_000, { root: true });
   bus.upsertResource(withStage(routedResource, "root"), "root-verified", context.scenarioId, "Root verified and archived resource package");
   const rootPackage = await getJson<any>(`http://127.0.0.1:${runtime.rootPort}/root/resources/${encodeURIComponent(resource.did)}`);
   bus.addArtifact({ id: `${resource.did}:root-package`, title: "Root resource package", owner: "root", resourceDid: resource.did, kind: "package", value: rootPackage });
+  writeResourceArtifact(context, resource, "root-resource-package.json", rootPackage);
   await waitForPressurePropagation(context, bus, accepted, expectedCount, registrarAccepted, 120_000, { root: true, cdn: true });
   bus.upsertResource(withStage(routedResource, "cdn"), "cdn-published", context.scenarioId, "CDN published Root-approved package");
   const cdnPackage = await getJson<any>(`http://127.0.0.1:${runtime.cdnPort}/cdn/resources/${encodeURIComponent(resource.did)}`);
   bus.addArtifact({ id: `${resource.did}:cdn-package`, title: "CDN resource package", owner: "cdn", resourceDid: resource.did, kind: "package", value: cdnPackage });
+  writeResourceArtifact(context, resource, "cdn-resource-package.json", cdnPackage);
   await waitForPressurePropagation(context, bus, accepted, expectedCount, registrarAccepted, 120_000);
   bus.upsertResource(withStage(routedResource, "discovery"), "discovery-indexed", context.scenarioId, "Both Discovery nodes fetched and indexed the resource");
 }
 
-async function queryAndConnect(context: DemoContext, bus: DemoEventBus, resourceDid: string): Promise<void> {
+async function queryAndConnect(context: DemoContext, bus: DemoEventBus, resource: DemoResource): Promise<void> {
+  const resourceDid = resource.did;
   const discoveryResponses = [];
   for (const discoveryPort of runtime.discoveryPorts) {
     const response = await postJson<any>(
@@ -667,9 +725,77 @@ async function queryAndConnect(context: DemoContext, bus: DemoEventBus, resource
   const invocation = buildTrustedInvocation(context.environment.workDir, resourceDid, discoveryResponses[0]);
   const result = await postJsonAllowFailure(`http://127.0.0.1:${runtime.serviceAgentPort}/agent/invoke`, invocation, 60_000);
   if (result.status !== 200) throw new Error(`Trusted invocation failed: ${JSON.stringify(result.body)}`);
+  const serviceDidDocument = readJson(path.join(context.dirs.serviceAgent, "did-document.json"));
+  if (!verifySignedValue(result.body, serviceDidDocument)) {
+    throw new Error("Service Agent response signature verification failed");
+  }
+  const serviceRegistrationCredential = result.body?.credentials?.find((credential: any) =>
+    Array.isArray(credential?.type)
+      ? credential.type.includes("OANResourceRegistrationCredential")
+      : credential?.type === "OANResourceRegistrationCredential",
+  );
+  if (!serviceRegistrationCredential) {
+    throw new Error("Service Agent did not return a resource registration VC");
+  }
+  const cdnPackage = await getJson<any>(`http://127.0.0.1:${runtime.cdnPort}/cdn/resources/${encodeURIComponent(resourceDid)}`);
+  verifyServiceRegistrationCredential(serviceRegistrationCredential, cdnPackage, readJson(path.join(context.dirs.registrars[0], "did-document.json")));
   bus.addArtifact({ id: `${resourceDid}:invocation`, title: "Trusted invocation envelope", owner: "user-agent", resourceDid, kind: "vc", value: invocation });
+  bus.addArtifact({
+    id: `${resourceDid}:exchanged-service-registration-vc`,
+    title: "Service Agent exchanged registration VC",
+    owner: "service-agent",
+    resourceDid,
+    kind: "vc",
+    value: serviceRegistrationCredential,
+  });
+  writeResourceArtifact(context, resource, "exchanged-service-registration-vc.json", serviceRegistrationCredential);
   bus.addArtifact({ id: `${resourceDid}:response`, title: "Service Agent signed response", owner: "service-agent", resourceDid, kind: "summary", value: result.body });
+  writeResourceArtifact(context, resource, "trusted-invocation-vc-envelope.json", invocation);
+  writeResourceArtifact(context, resource, "service-agent-signed-response.json", result.body);
   bus.emit({ kind: "trusted-connected", scenarioId: context.scenarioId, title: "VC exchange verified, business connection established", resourceDid });
+}
+
+function verifyServiceRegistrationCredential(credential: any, resourcePackage: any, registrarDidDocument: any): void {
+  if (!credentialTypes(credential).has("OANResourceRegistrationCredential")) throw new Error("Invalid service registration VC type");
+  if (credential.issuer !== registrarDidDocument.id) throw new Error("Service registration VC issuer mismatch");
+  if (!verifySignedValue(credential, registrarDidDocument)) throw new Error("Service registration VC signature invalid");
+  if (credential.credentialStatus?.status !== "active") throw new Error("Service registration VC is not active");
+  const subject = credential.credentialSubject ?? {};
+  const resourceDid = resourcePackage.resourceDid ?? resourcePackage.did;
+  if (subject.id !== resourceDid || subject.resourceDid !== resourceDid) throw new Error("Service registration VC subject mismatch");
+  if (subject.resourceType !== resourcePackage.resourceType) throw new Error("Service registration VC resource type mismatch");
+  const packageDidDocumentHash = stripSha256(resourcePackage.didDocumentHash ?? sha256Canonical(resourcePackage.didDocument ?? {}));
+  if (stripSha256(subject.didDocumentHash) !== packageDidDocumentHash) throw new Error("Service registration VC DID Document hash mismatch");
+  if (resourcePackage.metadataHash && stripSha256(subject.metadataHash) !== stripSha256(resourcePackage.metadataHash)) {
+    throw new Error("Service registration VC metadata hash mismatch");
+  }
+}
+
+function verifySignedValue(value: any, didDocument: any): boolean {
+  const proof = value?.proof;
+  if (!proof?.creator || !proof?.proofValue) return false;
+  const method = (didDocument.verificationMethod ?? []).find((candidate: any) => candidate.id === proof.creator);
+  if (!method?.publicKeyJwk) return false;
+  const unsigned = structuredClone(value);
+  delete unsigned.proof;
+  delete unsigned.proofCreator;
+  const suite = String(proof.cryptoSuite ?? method.cryptoSuite ?? "Ed25519Sha256Legacy");
+  const input =
+    suite === "Ed25519Sha256" || suite === "ed25519-sha256"
+      ? Buffer.from(canonicalJson(unsigned), "utf8")
+      : Buffer.from(crypto.createHash("sha256").update(canonicalJson(unsigned)).digest("hex"), "utf8");
+  const publicKey = crypto.createPublicKey({ key: method.publicKeyJwk, format: "jwk" });
+  return crypto.verify(null, input, publicKey, Buffer.from(String(proof.proofValue), "base64url"));
+}
+
+function credentialTypes(credential: any): Set<string> {
+  if (Array.isArray(credential?.type)) return new Set(credential.type.map(String));
+  return credential?.type ? new Set([String(credential.type)]) : new Set();
+}
+
+function stripSha256(value: unknown): string {
+  const text = String(value ?? "");
+  return text.startsWith("sha256:") ? text.slice("sha256:".length) : text;
 }
 
 async function emitPressureStats(context: DemoContext, bus: DemoEventBus, accepted: number, total: number, registrarAccepted: number[]): Promise<Record<string, unknown>> {
@@ -735,6 +861,21 @@ function toDemoResource(did: string, type: ResourceType, name: string, tags: str
 
 function withStage(resource: DemoResource, stage: DemoResource["stage"]): DemoResource {
   return { ...resource, stage };
+}
+
+function writeResourceArtifact(context: DemoContext, resource: DemoResource, fileName: string, value: unknown): string {
+  const dir = resourceArtifactDir(context, resource);
+  const target = path.join(dir, fileName);
+  writeJson(target, value);
+  return target;
+}
+
+function resourceArtifactDir(context: DemoContext, resource: DemoResource): string {
+  const didTail = resource.did.split(":").pop()?.slice(-10) ?? "resource";
+  const safeName = resource.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || "resource";
+  const dir = path.join(context.dirs.demoArtifacts, "resources", `${resource.type}-${safeName}-${didTail}`);
+  ensureDir(dir);
+  return dir;
 }
 
 function addNodeArtifacts(bus: DemoEventBus, scenarioId: DemoScenarioId, owner: string, dir: string): void {

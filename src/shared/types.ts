@@ -27,7 +27,7 @@ export type DemoEventKind =
 export interface DemoNode {
   id: string;
   label: string;
-  kind: "root" | "registrar" | "discovery" | "cdn" | "publisher" | "nats" | "service-agent" | "user-agent";
+  kind: "root" | "registrar" | "discovery" | "cdn" | "publisher" | "nats" | "service-agent" | "user-agent" | "governance";
   did?: string;
   endpoint?: string;
   status?: "idle" | "starting" | "running" | "done" | "error";

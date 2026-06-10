@@ -13,7 +13,7 @@ import "./styles.css";
 
 const scenarioLabels: Record<DemoScenarioId, string> = {
   "authorization-history": "Auth History",
-  "service-agent": "Service Agent",
+  "service-agent": "One Agent",
   "mixed-four": "Four Resources",
   "mixed-1000": "1000 Mixed",
 };
@@ -37,7 +37,12 @@ function App() {
   const [selectedScenario, setSelectedScenario] = useState<DemoScenarioId>("authorization-history");
   const [openDrawer, setOpenDrawer] = useState<"resources" | "artifacts" | "details" | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [vcExchangeHolding, setVcExchangeHolding] = useState(false);
+  const [vcExchangeStartedAt, setVcExchangeStartedAt] = useState<number | null>(null);
+  const [vcExchangeFrameNow, setVcExchangeFrameNow] = useState(0);
   const userSelectedScenario = useRef(false);
+  const vcExchangeTimer = useRef<number | null>(null);
+  const vcExchangeFrameTimer = useRef<number | null>(null);
 
   useEffect(() => {
     refreshSnapshot(setSnapshot, (incoming) => {
@@ -51,9 +56,34 @@ function App() {
     });
     source.addEventListener("demo", (event) => {
       const demoEvent = JSON.parse((event as MessageEvent).data) as DemoEvent;
+      if (demoEvent.scenarioId === "service-agent" && demoEvent.kind === "trusted-connected") {
+        if (vcExchangeTimer.current) window.clearTimeout(vcExchangeTimer.current);
+        if (vcExchangeFrameTimer.current) window.clearInterval(vcExchangeFrameTimer.current);
+        const startedAt = Date.now();
+        setVcExchangeStartedAt(startedAt);
+        setVcExchangeFrameNow(startedAt);
+        setVcExchangeHolding(true);
+        vcExchangeFrameTimer.current = window.setInterval(() => setVcExchangeFrameNow(Date.now()), 33);
+        vcExchangeTimer.current = window.setTimeout(() => {
+          setVcExchangeHolding(false);
+          setVcExchangeFrameNow(startedAt + 3000);
+          if (vcExchangeFrameTimer.current) window.clearInterval(vcExchangeFrameTimer.current);
+          vcExchangeFrameTimer.current = null;
+        }, 3000);
+      } else if (demoEvent.kind === "scenario-started") {
+        if (vcExchangeTimer.current) window.clearTimeout(vcExchangeTimer.current);
+        if (vcExchangeFrameTimer.current) window.clearInterval(vcExchangeFrameTimer.current);
+        vcExchangeFrameTimer.current = null;
+        setVcExchangeStartedAt(null);
+        setVcExchangeHolding(false);
+      }
       setSnapshot((current) => reduceEvent(current, demoEvent));
     });
-    return () => source.close();
+    return () => {
+      source.close();
+      if (vcExchangeTimer.current) window.clearTimeout(vcExchangeTimer.current);
+      if (vcExchangeFrameTimer.current) window.clearInterval(vcExchangeFrameTimer.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -68,15 +98,22 @@ function App() {
     }
   }, [snapshot.activeScenario]);
 
-  const displaySnapshot = useMemo(() => resetSnapshotForScenario(snapshot, selectedScenario), [snapshot, selectedScenario]);
+  const isBusy = snapshot.running || vcExchangeHolding;
+  const vcExchangeElapsedMs = vcExchangeStartedAt === null ? null : Math.max(0, vcExchangeFrameNow - vcExchangeStartedAt);
+  const displaySnapshot = useMemo(() => applyVcExchangePresentationHold(resetSnapshotForScenario(snapshot, selectedScenario), vcExchangeHolding), [snapshot, selectedScenario, vcExchangeHolding]);
   const graph = useMemo(() => buildGraph(displaySnapshot), [displaySnapshot]);
   const displayArtifacts = displaySnapshot.artifacts;
 
   async function runScenario() {
-    if (snapshot.running) {
+    if (isBusy) {
       notifyRunning();
       return;
     }
+    if (vcExchangeTimer.current) window.clearTimeout(vcExchangeTimer.current);
+    if (vcExchangeFrameTimer.current) window.clearInterval(vcExchangeFrameTimer.current);
+    vcExchangeFrameTimer.current = null;
+    setVcExchangeStartedAt(null);
+    setVcExchangeHolding(false);
     const optimisticEvent: DemoEvent = {
       id: Date.now(),
       at: new Date().toISOString(),
@@ -117,10 +154,15 @@ function App() {
   }
 
   function changeScenario(nextScenario: DemoScenarioId) {
-    if (snapshot.running) {
+    if (isBusy) {
       notifyRunning();
       return;
     }
+    if (vcExchangeTimer.current) window.clearTimeout(vcExchangeTimer.current);
+    if (vcExchangeFrameTimer.current) window.clearInterval(vcExchangeFrameTimer.current);
+    vcExchangeFrameTimer.current = null;
+    setVcExchangeStartedAt(null);
+    setVcExchangeHolding(false);
     userSelectedScenario.current = true;
     setSelectedScenario(nextScenario);
     setSelectedDetail(null);
@@ -147,19 +189,19 @@ function App() {
           <select
             value={selectedScenario}
             onMouseDown={(event) => {
-              if (snapshot.running) {
+              if (isBusy) {
                 event.preventDefault();
                 notifyRunning();
               }
             }}
             onKeyDown={(event) => {
-              if (snapshot.running) {
+              if (isBusy) {
                 event.preventDefault();
                 notifyRunning();
               }
             }}
             onChange={(event) => changeScenario(event.target.value as DemoScenarioId)}
-            aria-disabled={snapshot.running}
+            aria-disabled={isBusy}
           >
             {Object.entries(scenarioLabels).map(([id, label]) => (
               <option key={id} value={id}>
@@ -167,7 +209,7 @@ function App() {
               </option>
             ))}
           </select>
-          <button onClick={runScenario} aria-disabled={snapshot.running}>
+          <button onClick={runScenario} aria-disabled={isBusy}>
             <Play size={16} />
             Run
           </button>
@@ -186,7 +228,7 @@ function App() {
 
       <section className="workspace">
         <div className={`topology-panel ${displaySnapshot.running ? "is-running" : ""}`}>
-          <TopologyGraph graph={graph} />
+          <TopologyGraph graph={graph} snapshot={displaySnapshot} vcExchangeElapsedMs={vcExchangeElapsedMs} />
         </div>
 
         <aside className="side-panel">
@@ -275,8 +317,8 @@ function App() {
 
             {openDrawer === "details" ? (
               <div className="detail-panel">
-                {selectedDetail ? <DetailHeader selectedDetail={selectedDetail} /> : null}
-                <pre>{selectedDetail ? JSON.stringify(detailValue(selectedDetail), null, 2) : "Open Resources or Artifacts and select one item to inspect its details."}</pre>
+                {selectedDetail ? <DetailHeader selectedDetail={selectedDetail} artifacts={displayArtifacts} /> : null}
+                <pre>{selectedDetail ? JSON.stringify(detailValue(selectedDetail, displayArtifacts), null, 2) : "Open Resources or Artifacts and select one item to inspect its details."}</pre>
               </div>
             ) : null}
           </div>
@@ -309,11 +351,12 @@ function DrawerTab({
   );
 }
 
-function DetailHeader({ selectedDetail }: { selectedDetail: SelectedDetail }) {
+function DetailHeader({ selectedDetail, artifacts }: { selectedDetail: SelectedDetail; artifacts: DemoArtifact[] }) {
   if (selectedDetail.kind === "resource") {
+    const didDocument = findResourceDidDocument(selectedDetail.resource, artifacts);
     return (
       <div className="detail-header">
-        <span>Resource</span>
+        <span>{didDocument ? "Resource DID Document" : "Resource"}</span>
         <strong>{selectedDetail.resource.name}</strong>
         <small>{selectedDetail.resource.did}</small>
       </div>
@@ -328,15 +371,23 @@ function DetailHeader({ selectedDetail }: { selectedDetail: SelectedDetail }) {
   );
 }
 
-function detailValue(selectedDetail: SelectedDetail): unknown {
-  if (selectedDetail.kind === "resource") return selectedDetail.resource;
+function detailValue(selectedDetail: SelectedDetail, artifacts: DemoArtifact[]): unknown {
+  if (selectedDetail.kind === "resource") {
+    return findResourceDidDocument(selectedDetail.resource, artifacts)?.value ?? selectedDetail.resource;
+  }
   return selectedDetail.artifact.value;
+}
+
+function findResourceDidDocument(resource: DemoResource, artifacts: DemoArtifact[]): DemoArtifact | undefined {
+  return artifacts.find((artifact) => artifact.kind === "did-document" && artifact.resourceDid === resource.did);
 }
 
 interface GraphNodeView {
   id: string;
   x: number;
   y: number;
+  width?: number;
+  height?: number;
   node: DemoNode;
   active: boolean;
   resourceText?: string;
@@ -353,12 +404,44 @@ interface GraphEdgeView {
   done: boolean;
   curved?: boolean;
   trust?: boolean;
+  authorization?: boolean;
 }
 
-function TopologyGraph({ graph }: { graph: { nodes: GraphNodeView[]; edges: GraphEdgeView[] } }) {
+interface GraphEdgeOptions {
+  id?: string;
+  variant?: "trust" | "authorization";
+  sourcePort?: GraphEdgeView["sourcePort"];
+  targetPort?: GraphEdgeView["targetPort"];
+}
+
+function TopologyGraph({ graph, snapshot, vcExchangeElapsedMs }: { graph: { nodes: GraphNodeView[]; edges: GraphEdgeView[]; verticalOffsetPx: number }; snapshot: DemoSnapshot; vcExchangeElapsedMs: number | null }) {
   const nodeMap = new Map(graph.nodes.map((node) => [node.id, node]));
+  const baseEdges = graph.edges.filter((edge) => !edge.authorization);
+  const authorizationEdges = graph.edges.filter((edge) => edge.authorization);
+  const renderEdge = (edge: GraphEdgeView) => {
+    const source = nodeMap.get(edge.source);
+    const target = nodeMap.get(edge.target);
+    if (!source || !target) return null;
+    const path = edgePath(source, target, edge);
+    const labelPoint = edgeLabelPoint(source, target, edge);
+    return (
+      <g
+        key={edge.id}
+        className={`topology-edge ${edge.active ? "edge-active" : ""} ${edge.done ? "edge-done" : ""} ${edge.trust ? "edge-trust" : ""} ${edge.authorization ? "edge-authorization" : ""}`}
+        data-edge-id={edge.id}
+      >
+        <title>{edge.id}</title>
+        <path d={path} markerEnd={edge.trust && !edge.active && !edge.done ? undefined : `url(#${edge.active ? "arrow-active" : edge.done ? "arrow-done" : "arrow-default"})`} />
+        {edge.label ? (
+          <text x={labelPoint.x} y={labelPoint.y}>
+            {edge.label}
+          </text>
+        ) : null}
+      </g>
+    );
+  };
   return (
-    <svg className="topology-svg" viewBox="0 0 1250 570" role="img" aria-label="OAN demo topology">
+    <svg className="topology-svg" viewBox="0 -90 1250 680" role="img" aria-label="OAN demo topology">
       <defs>
         <marker id="arrow-default" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto" markerUnits="strokeWidth">
           <path d="M 0 0 L 5 2.5 L 0 5 z" />
@@ -370,88 +453,171 @@ function TopologyGraph({ graph }: { graph: { nodes: GraphNodeView[]; edges: Grap
           <path d="M 0 0 L 5 2.5 L 0 5 z" />
         </marker>
       </defs>
-      <g className="topology-edges">
-        {graph.edges.map((edge) => {
-          const source = nodeMap.get(edge.source);
-          const target = nodeMap.get(edge.target);
-          if (!source || !target) return null;
-          const path = edgePath(source, target, edge);
-          const labelPoint = edgeLabelPoint(source, target, edge);
-          return (
-            <g key={edge.id} className={`topology-edge ${edge.active ? "edge-active" : ""} ${edge.done ? "edge-done" : ""} ${edge.trust ? "edge-trust" : ""}`} data-edge-id={edge.id}>
-              <title>{edge.id}</title>
-              <path d={path} markerEnd={edge.trust && !edge.active && !edge.done ? undefined : `url(#${edge.active ? "arrow-active" : edge.done ? "arrow-done" : "arrow-default"})`} />
-              {edge.label ? (
-                <text x={labelPoint.x} y={labelPoint.y}>
-                  {edge.label}
-                </text>
-              ) : null}
-            </g>
-          );
-        })}
-      </g>
-      <g className="topology-nodes">
-        {graph.nodes.map((item) => (
-          <foreignObject key={item.id} x={item.x} y={item.y} width="180" height="124" className="topology-node">
-            <div className={`graph-node graph-${item.node.kind} status-${item.node.status ?? "idle"} ${item.node.authorizationStatus ? `auth-${item.node.authorizationStatus}` : ""} ${item.active ? "status-active" : ""}`}>
-              <strong>
-                {item.node.label}
-                {item.active ? <i /> : null}
-              </strong>
-              <span>{item.node.did ? shortDid(item.node.did) : item.node.endpoint ?? item.node.kind}</span>
-              {item.node.domains?.length ? <small>{item.node.domains.join(", ")}</small> : null}
-              {item.node.authorizationStatus ? <small className="auth-state">{item.node.authorizationStatus}</small> : null}
-              {item.node.authorizationNote ? <small>{item.node.authorizationNote}</small> : null}
-              {item.resourceText ? <em>{item.resourceText}</em> : null}
-            </div>
-          </foreignObject>
-        ))}
-      </g>
-      <g className="topology-handles">
-        {graph.edges.flatMap((edge) => {
-          const source = nodeMap.get(edge.source);
-          const target = nodeMap.get(edge.target);
-          if (!source || !target) return [];
-          const a = portPoint(source, edge.sourcePort);
-          const b = portPoint(target, edge.targetPort);
-          return [
-            <circle key={`${edge.id}:s`} cx={a.x} cy={a.y} r="4" />,
-            <circle key={`${edge.id}:t`} cx={b.x} cy={b.y} r="4" />,
-          ];
-        })}
+      <g className="topology-scene" style={{ transform: `translateY(${graph.verticalOffsetPx}px)` }}>
+        <g className="topology-edges">
+          {baseEdges.map(renderEdge)}
+        </g>
+        <g className="topology-nodes">
+          {graph.nodes.map((item) => (
+            <foreignObject key={item.id} x={item.x} y={item.y} width={item.width ?? 180} height={item.height ?? 124} className="topology-node">
+              <div className={`graph-node graph-${item.node.kind} status-${item.node.status ?? "idle"} ${item.node.authorizationStatus ? `auth-${item.node.authorizationStatus}` : ""} ${item.active ? "status-active" : ""}`}>
+                <strong>
+                  {item.node.label}
+                  {item.active ? <i /> : null}
+                </strong>
+                {item.node.kind === "governance" ? null : (
+                  <>
+                    <span>{item.node.did ? shortDid(item.node.did) : item.node.endpoint ?? item.node.kind}</span>
+                    {item.node.domains?.length ? <small>{item.node.domains.join(", ")}</small> : null}
+                    {item.node.authorizationStatus ? <small className="auth-state">{item.node.authorizationStatus}</small> : null}
+                    {item.node.authorizationNote ? <small>{item.node.authorizationNote}</small> : null}
+                    {item.resourceText ? <em>{item.resourceText}</em> : null}
+                  </>
+                )}
+              </div>
+            </foreignObject>
+          ))}
+        </g>
+        <g className="topology-authorization-edges">
+          {authorizationEdges.map(renderEdge)}
+        </g>
+        <g className="topology-handles">
+          {graph.edges.flatMap((edge) => {
+            if (edge.authorization) return [];
+            const source = nodeMap.get(edge.source);
+            const target = nodeMap.get(edge.target);
+            if (!source || !target) return [];
+            const a = portPoint(source, edge.sourcePort);
+            const b = portPoint(target, edge.targetPort);
+            return [
+              <circle key={`${edge.id}:s`} cx={a.x} cy={a.y} r="4" />,
+              <circle key={`${edge.id}:t`} cx={b.x} cy={b.y} r="4" />,
+            ];
+          })}
+        </g>
+        <VcExchangeAnimation graph={graph} snapshot={snapshot} elapsedMs={vcExchangeElapsedMs} />
       </g>
     </svg>
   );
 }
 
+function VcExchangeAnimation({ graph, snapshot, elapsedMs }: { graph: { nodes: GraphNodeView[] }; snapshot: DemoSnapshot; elapsedMs: number | null }) {
+  const trustedEvent = [...snapshot.events].reverse().find((event) => event.kind === "trusted-connected");
+  if (snapshot.activeScenario !== "service-agent" || !trustedEvent || elapsedMs === null) return null;
+  const service = graph.nodes.find((node) => node.id === "service-agent");
+  const user = graph.nodes.find((node) => node.id === "user-agent");
+  if (!service || !user) return null;
+  const serviceSlots = vcBadgeSlots(service);
+  const userSlots = vcBadgeSlots(user);
+  const shouldRenderCopies = elapsedMs >= 1000;
+  const moveProgress = Math.max(0, Math.min(1, (elapsedMs - 1000) / 1000));
+  const serviceCopy = lerpPoint(serviceSlots.own, userSlots.incoming, moveProgress);
+  const userCopy = lerpPoint(userSlots.own, serviceSlots.incoming, moveProgress);
+  return (
+    <g className="vc-exchange-layer" aria-label="VC exchange animation">
+      <VcBadge x={serviceSlots.own.x} y={serviceSlots.own.y} className="vc-badge-service" />
+      <VcBadge x={userSlots.own.x} y={userSlots.own.y} className="vc-badge-user" />
+      {shouldRenderCopies ? (
+        <>
+          <VcBadge x={serviceCopy.x} y={serviceCopy.y} className="vc-badge-service vc-badge-copy" />
+          <VcBadge x={userCopy.x} y={userCopy.y} className="vc-badge-user vc-badge-copy" />
+        </>
+      ) : null}
+    </g>
+  );
+}
+
+function VcBadge({ x, y, className }: { x: number; y: number; className: string }) {
+  return (
+    <g className={`vc-badge ${className}`} transform={`translate(${x} ${y})`}>
+      <rect width="28" height="24" rx="5" />
+      <text x="14" y="16">
+        vc
+      </text>
+    </g>
+  );
+}
+
+function lerpPoint(from: { x: number; y: number }, to: { x: number; y: number }, progress: number): { x: number; y: number } {
+  return {
+    x: from.x + (to.x - from.x) * progress,
+    y: from.y + (to.y - from.y) * progress,
+  };
+}
+
+function vcBadgeSlots(node: GraphNodeView): { own: { x: number; y: number }; incoming: { x: number; y: number } } {
+  const width = node.width ?? 180;
+  const visibleHeight = node.node.kind === "service-agent" || node.node.kind === "user-agent" ? 59 : node.height ? Math.min(node.height, 92) : 92;
+  const badgeWidth = 28;
+  const gap = 6;
+  const left = node.x + width / 2 - badgeWidth - gap / 2;
+  const right = left + badgeWidth + gap;
+  const y = node.y + visibleHeight + 4;
+  if (node.id === "user-agent") {
+    return { own: { x: right, y }, incoming: { x: left, y } };
+  }
+  return { own: { x: left, y }, incoming: { x: right, y } };
+}
+
 function edgePath(source: GraphNodeView, target: GraphNodeView, edge: GraphEdgeView): string {
+  const curve = edgeCurve(source, target, edge);
+  if (curve.line) return `M ${curve.a.x} ${curve.a.y} L ${curve.b.x} ${curve.b.y}`;
+  return `M ${curve.a.x} ${curve.a.y} C ${curve.c1.x} ${curve.c1.y}, ${curve.c2.x} ${curve.c2.y}, ${curve.b.x} ${curve.b.y}`;
+}
+
+function edgeCurve(source: GraphNodeView, target: GraphNodeView, edge: GraphEdgeView): { a: { x: number; y: number }; b: { x: number; y: number }; c1: { x: number; y: number }; c2: { x: number; y: number }; line: boolean } {
   const a = portPoint(source, edge.sourcePort);
   const b = portPoint(target, edge.targetPort);
-  if (edge.curved) {
-    const c1 = { x: a.x + 180, y: a.y + 92 };
-    const c2 = { x: b.x - 180, y: b.y + 92 };
-    return `M ${a.x} ${a.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${b.x} ${b.y}`;
-  }
   if (edge.sourcePort === "bottom" && edge.targetPort === "top") {
-    return `M ${a.x} ${a.y} L ${b.x} ${b.y}`;
+    return { a, b, c1: a, c2: b, line: true };
   }
-  const dx = Math.max(70, Math.abs(b.x - a.x) * 0.42);
-  return `M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`;
+  const distance = Math.hypot(b.x - a.x, b.y - a.y);
+  const tension = edge.curved ? Math.min(110, Math.max(42, distance * 0.25)) : Math.min(120, Math.max(24, distance * 0.42));
+  const controlTension = facingHorizontalPorts(edge, a, b) ? Math.min(tension, Math.max(18, Math.abs(b.x - a.x) * 0.45)) : tension;
+  const sourceVector = portVector(edge.sourcePort);
+  const targetVector = portVector(edge.targetPort);
+  const c1 = { x: a.x + sourceVector.x * controlTension, y: a.y + sourceVector.y * controlTension };
+  const c2 = { x: b.x + targetVector.x * controlTension, y: b.y + targetVector.y * controlTension };
+  return { a, b, c1, c2, line: false };
+}
+
+function facingHorizontalPorts(edge: GraphEdgeView, a: { x: number; y: number }, b: { x: number; y: number }): boolean {
+  return (
+    (edge.sourcePort === "right" && edge.targetPort === "left" && b.x > a.x) ||
+    (edge.sourcePort === "left" && edge.targetPort === "right" && b.x < a.x)
+  );
+}
+
+function portVector(port: GraphEdgeView["sourcePort"]): { x: number; y: number } {
+  if (port === "left") return { x: -1, y: 0 };
+  if (port === "right") return { x: 1, y: 0 };
+  if (port === "top") return { x: 0, y: -1 };
+  return { x: 0, y: 1 };
 }
 
 function edgeLabelPoint(source: GraphNodeView, target: GraphNodeView, edge: GraphEdgeView): { x: number; y: number } {
-  const a = portPoint(source, edge.sourcePort);
-  const b = portPoint(target, edge.targetPort);
-  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - 8 };
+  const curve = edgeCurve(source, target, edge);
+  if (curve.line) return { x: (curve.a.x + curve.b.x) / 2, y: (curve.a.y + curve.b.y) / 2 - 8 };
+  const point = cubicBezierPoint(curve.a, curve.c1, curve.c2, curve.b, 0.5);
+  return { x: point.x, y: point.y - 8 };
+}
+
+function cubicBezierPoint(a: { x: number; y: number }, c1: { x: number; y: number }, c2: { x: number; y: number }, b: { x: number; y: number }, t: number): { x: number; y: number } {
+  const mt = 1 - t;
+  return {
+    x: mt ** 3 * a.x + 3 * mt ** 2 * t * c1.x + 3 * mt * t ** 2 * c2.x + t ** 3 * b.x,
+    y: mt ** 3 * a.y + 3 * mt ** 2 * t * c1.y + 3 * mt * t ** 2 * c2.y + t ** 3 * b.y,
+  };
 }
 
 function portPoint(node: GraphNodeView, port: GraphEdgeView["sourcePort"]): { x: number; y: number } {
-  const width = 180;
-  const height = 92;
-  if (port === "left") return { x: node.x, y: node.y + height / 2 };
-  if (port === "right") return { x: node.x + width, y: node.y + height / 2 };
-  if (port === "top") return { x: node.x + width / 2, y: node.y };
-  return { x: node.x + width / 2, y: node.y + height };
+  const width = node.width ?? 180;
+  const height = node.height ? Math.min(node.height, 92) : 92;
+  const offset = 8;
+  if (port === "left") return { x: node.x - offset, y: node.y + height / 2 };
+  if (port === "right") return { x: node.x + width + offset, y: node.y + height / 2 };
+  if (port === "top") return { x: node.x + width / 2, y: node.y - offset };
+  return { x: node.x + width / 2, y: node.y + height + offset };
 }
 
 function refreshSnapshot(setSnapshot: React.Dispatch<React.SetStateAction<DemoSnapshot>>, onSnapshot?: (snapshot: DemoSnapshot) => void) {
@@ -483,6 +649,15 @@ function resetSnapshotForScenario(snapshot: DemoSnapshot, selectedScenario: Demo
     events: [],
     stats: {},
   });
+}
+
+function applyVcExchangePresentationHold(snapshot: DemoSnapshot, holding: boolean): DemoSnapshot {
+  if (!holding || snapshot.activeScenario !== "service-agent") return snapshot;
+  return {
+    ...snapshot,
+    running: true,
+    events: snapshot.events.filter((event) => event.kind !== "scenario-completed"),
+  };
 }
 
 function normalizeSnapshot(snapshot: DemoSnapshot): DemoSnapshot {
@@ -541,6 +716,7 @@ function defaultTopologyNodes(): DemoNode[] {
 
 function authorizationTopologyNodes(): DemoNode[] {
   return [
+    { id: "onchain-governance", label: "Onchain Governance", kind: "governance", status: "running" },
     { id: "root", label: "Root", kind: "root", endpoint: "Trust anchor", status: "idle", authorizationStatus: "unauthorized", authorizationNote: "Waiting for replay" },
     { id: "registrar-1", label: "Registrar 1", kind: "registrar", endpoint: "genesis-registrar-1", status: "idle", authorizationStatus: "unauthorized", authorizationNote: "Waiting for replay" },
     { id: "registrar-2", label: "Registrar 2", kind: "registrar", endpoint: "genesis-registrar-2", status: "idle", authorizationStatus: "unauthorized", authorizationNote: "Waiting for replay" },
@@ -603,8 +779,9 @@ function reduceEvent(snapshot: DemoSnapshot, event: DemoEvent): DemoSnapshot {
   });
 }
 
-function buildGraph(snapshot: DemoSnapshot): { nodes: GraphNodeView[]; edges: GraphEdgeView[] } {
+function buildGraph(snapshot: DemoSnapshot): { nodes: GraphNodeView[]; edges: GraphEdgeView[]; verticalOffsetPx: number } {
   const positions: Record<string, { x: number; y: number }> = {
+    "onchain-governance": { x: 185, y: -66 },
     "service-agent": { x: 0, y: 430 },
     "registrar-1": { x: 210, y: 40 },
     "registrar-2": { x: 210, y: 180 },
@@ -619,39 +796,65 @@ function buildGraph(snapshot: DemoSnapshot): { nodes: GraphNodeView[]; edges: Gr
   const doneEdges = doneEdgeIds(snapshot);
   const activeNodes = activeNodeIds(snapshot, activeEdges);
   const resourcesByNode = resourcesGroupedByNode(snapshot);
+  const sizes: Record<string, { width: number; height: number }> = {
+    "onchain-governance": { width: 720, height: 48 },
+  };
   const nodes = snapshot.nodes.map((node) => ({
     id: node.id,
     x: positions[node.id]?.x ?? 0,
-    y: positions[node.id]?.y ?? 0,
+    y: adjustedTopologyY(node.id, positions[node.id]?.y ?? 0, snapshot.activeScenario),
+    width: sizes[node.id]?.width,
+    height: sizes[node.id]?.height,
     node,
     active: activeNodes.has(node.id),
     resourceText: resourcesByNode[node.id],
   }));
+  const isAuthorizationHistory = snapshot.activeScenario === "authorization-history";
+  const agentEdgeOptions: GraphEdgeOptions | undefined = isAuthorizationHistory ? { variant: "trust" } : undefined;
+  const registrarRootEdges = isAuthorizationHistory
+    ? [
+        edge("root", "registrar-1", activeEdges, doneEdges, edgeLabel(snapshot, "registrar-1-root"), { id: "registrar-1-root", variant: "authorization", sourcePort: "left", targetPort: "right" }),
+        edge("root", "registrar-2", activeEdges, doneEdges, edgeLabel(snapshot, "registrar-2-root"), { id: "registrar-2-root", variant: "authorization", sourcePort: "left", targetPort: "right" }),
+        edge("root", "registrar-3", activeEdges, doneEdges, edgeLabel(snapshot, "registrar-3-root"), { id: "registrar-3-root", variant: "authorization", sourcePort: "left", targetPort: "right" }),
+      ]
+    : [
+        edge("registrar-1", "root", activeEdges, doneEdges, edgeLabel(snapshot, "registrar-1-root")),
+        edge("registrar-2", "root", activeEdges, doneEdges, edgeLabel(snapshot, "registrar-2-root")),
+        edge("registrar-3", "root", activeEdges, doneEdges, edgeLabel(snapshot, "registrar-3-root")),
+      ];
   const edges: GraphEdgeView[] = [
-    edge("service-agent", "registrar-1", activeEdges, doneEdges, edgeLabel(snapshot, "service-agent-registrar-1")),
-    edge("service-agent", "registrar-2", activeEdges, doneEdges, edgeLabel(snapshot, "service-agent-registrar-2")),
-    edge("service-agent", "registrar-3", activeEdges, doneEdges, edgeLabel(snapshot, "service-agent-registrar-3")),
-    edge("registrar-1", "root", activeEdges, doneEdges, edgeLabel(snapshot, "registrar-1-root")),
-    edge("registrar-2", "root", activeEdges, doneEdges, edgeLabel(snapshot, "registrar-2-root")),
-    edge("registrar-3", "root", activeEdges, doneEdges, edgeLabel(snapshot, "registrar-3-root")),
+    edge("service-agent", "registrar-1", activeEdges, doneEdges, edgeLabel(snapshot, "service-agent-registrar-1"), agentEdgeOptions),
+    edge("service-agent", "registrar-2", activeEdges, doneEdges, edgeLabel(snapshot, "service-agent-registrar-2"), agentEdgeOptions),
+    edge("service-agent", "registrar-3", activeEdges, doneEdges, edgeLabel(snapshot, "service-agent-registrar-3"), agentEdgeOptions),
+    ...registrarRootEdges,
     edge("root", "cdn", activeEdges, doneEdges, edgeLabel(snapshot, "root-cdn")),
     edge("root", "discovery-1", activeEdges, doneEdges, edgeLabel(snapshot, "root-discovery-1")),
     edge("root", "discovery-2", activeEdges, doneEdges, edgeLabel(snapshot, "root-discovery-2")),
     edge("cdn", "discovery-1", activeEdges, doneEdges, edgeLabel(snapshot, "cdn-discovery-1")),
     edge("cdn", "discovery-2", activeEdges, doneEdges, edgeLabel(snapshot, "cdn-discovery-2")),
-    edge("discovery-1", "user-agent", activeEdges, doneEdges, edgeLabel(snapshot, "discovery-1-user-agent")),
-    edge("discovery-2", "user-agent", activeEdges, doneEdges, edgeLabel(snapshot, "discovery-2-user-agent")),
-    edge("service-agent", "user-agent", activeEdges, doneEdges, edgeLabel(snapshot, "service-agent-user-agent"), "trust"),
+    edge("discovery-1", "user-agent", activeEdges, doneEdges, edgeLabel(snapshot, "discovery-1-user-agent"), agentEdgeOptions),
+    edge("discovery-2", "user-agent", activeEdges, doneEdges, edgeLabel(snapshot, "discovery-2-user-agent"), agentEdgeOptions),
+    edge("user-agent", "service-agent", activeEdges, doneEdges, edgeLabel(snapshot, "service-agent-user-agent"), { id: "service-agent-user-agent", variant: "trust", sourcePort: "left", targetPort: "right" }),
   ];
-  return { nodes, edges };
+  return { nodes, edges, verticalOffsetPx: topologyVerticalOffsetPx(snapshot.activeScenario) };
 }
 
-function edge(source: string, target: string, activeEdges: Set<string>, doneEdges: Set<string>, label?: string, variant?: "trust"): GraphEdgeView {
-  const id = `${source}-${target}`;
+function adjustedTopologyY(nodeId: string, y: number, scenarioId?: DemoScenarioId): number {
+  return y;
+}
+
+function topologyVerticalOffsetPx(scenarioId?: DemoScenarioId): number {
+  const grid = 18;
+  return scenarioId && scenarioId !== "authorization-history" ? -3 * grid : 0;
+}
+
+function edge(source: string, target: string, activeEdges: Set<string>, doneEdges: Set<string>, label?: string, options: GraphEdgeOptions = {}): GraphEdgeView {
+  const id = options.id ?? `${source}-${target}`;
   const active = activeEdges.has(id);
   const done = doneEdges.has(id);
   const verticalRootCdn = source === "root" && target === "cdn";
-  const trust = variant === "trust";
+  const trust = options.variant === "trust";
+  const authorization = options.variant === "authorization";
   const agentToRegistrar = source === "service-agent" && target.startsWith("registrar-");
   const discoveryToUser = source.startsWith("discovery-") && target === "user-agent";
   return {
@@ -661,10 +864,11 @@ function edge(source: string, target: string, activeEdges: Set<string>, doneEdge
     label,
     active,
     done,
-    sourcePort: verticalRootCdn ? "bottom" : agentToRegistrar ? "top" : "right",
-    targetPort: verticalRootCdn ? "top" : discoveryToUser ? "top" : "left",
+    sourcePort: options.sourcePort ?? (verticalRootCdn ? "bottom" : agentToRegistrar ? "top" : "right"),
+    targetPort: options.targetPort ?? (verticalRootCdn ? "top" : discoveryToUser ? "top" : "left"),
     curved: trust,
     trust,
+    authorization,
   };
 }
 
@@ -740,6 +944,7 @@ function activeEdgeIds(snapshot: DemoSnapshot): Set<string> {
 
 function doneEdgeIds(snapshot: DemoSnapshot): Set<string> {
   const done = new Set<string>();
+  if (snapshot.activeScenario === "authorization-history") return done;
   if (snapshot.running || !snapshot.events.some((event) => event.kind === "scenario-completed")) return done;
   const add = (...ids: string[]) => ids.forEach((id) => done.add(id));
   const registrarNode = currentRegistrarNode(snapshot);
@@ -774,6 +979,9 @@ function activeNodeIds(snapshot: DemoSnapshot, activeEdges: Set<string>): Set<st
   };
   activeEdges.forEach((id) => endpoints[id]?.forEach((nodeId) => nodes.add(nodeId)));
   const latest = snapshot.events[snapshot.events.length - 1];
+  if (snapshot.activeScenario === "authorization-history" && snapshot.running && latest?.kind === "authorization-updated") {
+    nodes.add("onchain-governance");
+  }
   if ((pipelineStarted(snapshot) || latest?.kind === "authorization-updated") && latest?.nodeId) nodes.add(latest.nodeId);
   return nodes;
 }
