@@ -68,6 +68,20 @@ export class DemoEventBus {
     });
   }
 
+  updateNodeAuthorization(id: string, patch: Partial<DemoNode>, scenarioId: DemoScenarioId, title: string, message?: string, stats?: Record<string, unknown>): void {
+    this.snapshot.nodes = this.snapshot.nodes.map((node) => (node.id === id ? { ...node, ...patch } : node));
+    if (stats) this.setStats(stats);
+    this.emit({
+      kind: "authorization-updated",
+      scenarioId,
+      title,
+      message,
+      nodeId: id,
+      nodes: this.snapshot.nodes,
+      stats,
+    });
+  }
+
   upsertResource(resource: DemoResource, kind: DemoEventKind, scenarioId: DemoScenarioId, title: string, message?: string): void {
     const existing = this.snapshot.resources.findIndex((entry) => entry.did === resource.did);
     if (existing >= 0) {

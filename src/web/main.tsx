@@ -12,6 +12,7 @@ import brand from "./assets/slogan.json";
 import "./styles.css";
 
 const scenarioLabels: Record<DemoScenarioId, string> = {
+  "authorization-history": "Auth History",
   "service-agent": "Service Agent",
   "mixed-four": "Four Resources",
   "mixed-1000": "1000 Mixed",
@@ -33,7 +34,7 @@ const initialSnapshot: DemoSnapshot = {
 function App() {
   const [snapshot, setSnapshot] = useState<DemoSnapshot>(initialSnapshot);
   const [selectedDetail, setSelectedDetail] = useState<SelectedDetail | null>(null);
-  const [selectedScenario, setSelectedScenario] = useState<DemoScenarioId>("service-agent");
+  const [selectedScenario, setSelectedScenario] = useState<DemoScenarioId>("authorization-history");
   const [openDrawer, setOpenDrawer] = useState<"resources" | "artifacts" | "details" | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const userSelectedScenario = useRef(false);
@@ -175,7 +176,7 @@ function App() {
       {toast ? <div className="toast">{toast}</div> : null}
 
       <section className="metrics-strip">
-        <Metric icon={<Network />} label="Nodes" value={snapshot.nodes.length} />
+        <Metric icon={<Network />} label="Nodes" value={displaySnapshot.nodes.length} />
         <Metric icon={<Boxes />} label="Resources" value={displaySnapshot.resources.length} />
         <Metric icon={<ShieldCheck />} label="Artifacts" value={displaySnapshot.artifacts.length} />
         <Metric icon={<Activity />} label="Events" value={displaySnapshot.events.length} />
@@ -392,13 +393,15 @@ function TopologyGraph({ graph }: { graph: { nodes: GraphNodeView[]; edges: Grap
       <g className="topology-nodes">
         {graph.nodes.map((item) => (
           <foreignObject key={item.id} x={item.x} y={item.y} width="180" height="124" className="topology-node">
-            <div className={`graph-node graph-${item.node.kind} status-${item.node.status ?? "idle"} ${item.active ? "status-active" : ""}`}>
+            <div className={`graph-node graph-${item.node.kind} status-${item.node.status ?? "idle"} ${item.node.authorizationStatus ? `auth-${item.node.authorizationStatus}` : ""} ${item.active ? "status-active" : ""}`}>
               <strong>
                 {item.node.label}
                 {item.active ? <i /> : null}
               </strong>
               <span>{item.node.did ? shortDid(item.node.did) : item.node.endpoint ?? item.node.kind}</span>
               {item.node.domains?.length ? <small>{item.node.domains.join(", ")}</small> : null}
+              {item.node.authorizationStatus ? <small className="auth-state">{item.node.authorizationStatus}</small> : null}
+              {item.node.authorizationNote ? <small>{item.node.authorizationNote}</small> : null}
               {item.resourceText ? <em>{item.resourceText}</em> : null}
             </div>
           </foreignObject>
@@ -464,7 +467,7 @@ function refreshSnapshot(setSnapshot: React.Dispatch<React.SetStateAction<DemoSn
 function mergeServerSnapshot(current: DemoSnapshot, incoming: DemoSnapshot): DemoSnapshot {
   return normalizeSnapshot({
     ...incoming,
-    nodes: mergeTopologyNodes(current.nodes, incoming.nodes, incoming.running),
+    nodes: mergeTopologyNodes(current.nodes, incoming.nodes, incoming.running, incoming.activeScenario),
   });
 }
 
@@ -474,7 +477,7 @@ function resetSnapshotForScenario(snapshot: DemoSnapshot, selectedScenario: Demo
     ...snapshot,
     running: false,
     activeScenario: selectedScenario,
-    nodes: snapshot.nodes.map((node) => ({ ...node, status: "idle" })),
+    nodes: topologyBaseNodes(selectedScenario).map((node) => ({ ...node, status: "idle" })),
     resources: [],
     artifacts: [],
     events: [],
@@ -485,15 +488,16 @@ function resetSnapshotForScenario(snapshot: DemoSnapshot, selectedScenario: Demo
 function normalizeSnapshot(snapshot: DemoSnapshot): DemoSnapshot {
   return {
     ...snapshot,
-    nodes: mergeTopologyNodes(defaultTopologyNodes(), snapshot.nodes, snapshot.running),
+    nodes: mergeTopologyNodes(topologyBaseNodes(snapshot.activeScenario), snapshot.nodes, snapshot.running, snapshot.activeScenario),
   };
 }
 
-function mergeTopologyNodes(baseNodes: DemoNode[], incomingNodes: DemoNode[], running = false): DemoNode[] {
-  const byId = new Map(defaultTopologyNodes().map((node) => [node.id, node]));
+function mergeTopologyNodes(baseNodes: DemoNode[], incomingNodes: DemoNode[], running = false, scenarioId?: DemoScenarioId): DemoNode[] {
+  const topologyNodes = topologyBaseNodes(scenarioId);
+  const byId = new Map(topologyNodes.map((node) => [node.id, node]));
   for (const node of baseNodes) byId.set(node.id, { ...byId.get(node.id), ...node });
   for (const node of incomingNodes) byId.set(node.id, { ...byId.get(node.id), ...node });
-  return defaultTopologyNodes().map((node) => {
+  return topologyNodes.map((node) => {
     const merged = byId.get(node.id) ?? node;
     return {
       ...node,
@@ -501,6 +505,10 @@ function mergeTopologyNodes(baseNodes: DemoNode[], incomingNodes: DemoNode[], ru
       status: merged.status ?? (running ? "starting" : "idle"),
     };
   });
+}
+
+function topologyBaseNodes(scenarioId?: DemoScenarioId): DemoNode[] {
+  return scenarioId === "authorization-history" ? authorizationTopologyNodes() : defaultTopologyNodes();
 }
 
 function defaultTopologyNodes(): DemoNode[] {
@@ -531,9 +539,41 @@ function defaultTopologyNodes(): DemoNode[] {
   ];
 }
 
+function authorizationTopologyNodes(): DemoNode[] {
+  return [
+    { id: "root", label: "Root", kind: "root", endpoint: "Trust anchor", status: "idle", authorizationStatus: "unauthorized", authorizationNote: "Waiting for replay" },
+    { id: "registrar-1", label: "Registrar 1", kind: "registrar", endpoint: "genesis-registrar-1", status: "idle", authorizationStatus: "unauthorized", authorizationNote: "Waiting for replay" },
+    { id: "registrar-2", label: "Registrar 2", kind: "registrar", endpoint: "genesis-registrar-2", status: "idle", authorizationStatus: "unauthorized", authorizationNote: "Waiting for replay" },
+    { id: "registrar-3", label: "Registrar 3", kind: "registrar", endpoint: "genesis-registrar-3", status: "idle", authorizationStatus: "unauthorized", authorizationNote: "Waiting for replay" },
+    { id: "cdn", label: "CDN", kind: "cdn", endpoint: "Not governed in replay", status: "idle", authorizationNote: "Outside chain authorization replay" },
+    {
+      id: "discovery-1",
+      label: "Discovery 1",
+      kind: "discovery",
+      endpoint: "genesis-discovery-1",
+      domains: ["genesis.openagenet.local", "openagenet.local"],
+      status: "idle",
+      authorizationStatus: "unauthorized",
+      authorizationNote: "Waiting for replay",
+    },
+    {
+      id: "discovery-2",
+      label: "Discovery 2",
+      kind: "discovery",
+      endpoint: "genesis-discovery-2",
+      domains: ["genesis.openagenet.local", "openagenet.local"],
+      status: "idle",
+      authorizationStatus: "unauthorized",
+      authorizationNote: "Waiting for replay",
+    },
+    { id: "service-agent", label: "Service Agent", kind: "service-agent", endpoint: "Not governed in replay", status: "idle", authorizationNote: "Outside chain authorization replay" },
+    { id: "user-agent", label: "User Agent", kind: "user-agent", status: "idle", authorizationNote: "Outside chain authorization replay" },
+  ];
+}
+
 function reduceEvent(snapshot: DemoSnapshot, event: DemoEvent): DemoSnapshot {
   let nodes = normalizeSnapshot(snapshot).nodes;
-  if (event.nodes) nodes = mergeTopologyNodes(nodes, event.nodes, snapshot.running);
+  if (event.nodes) nodes = mergeTopologyNodes(nodes, event.nodes, snapshot.running, event.scenarioId ?? snapshot.activeScenario);
   if (event.kind === "node-started" && event.nodeId) {
     nodes = nodes.map((node) => node.id === event.nodeId ? { ...node, status: "running" } : node);
   }
@@ -647,7 +687,8 @@ function FlowBanner({ snapshot }: { snapshot: DemoSnapshot }) {
   const stats = snapshot.stats;
   const total = Number(stats.total ?? 0);
   const accepted = Number(stats.accepted ?? 0);
-  const percent = total > 0 ? Math.round((accepted / total) * 100) : snapshot.running ? 12 : 100;
+  const current = Number(stats.current ?? accepted);
+  const percent = total > 0 ? Math.round((current / total) * 100) : snapshot.running ? 12 : 100;
   const phase = snapshot.running && !pipelineStarted(snapshot) ? "Starting Nodes" : snapshot.running ? "Running" : "Ready";
   return (
     <div className="flow-banner">
@@ -733,7 +774,7 @@ function activeNodeIds(snapshot: DemoSnapshot, activeEdges: Set<string>): Set<st
   };
   activeEdges.forEach((id) => endpoints[id]?.forEach((nodeId) => nodes.add(nodeId)));
   const latest = snapshot.events[snapshot.events.length - 1];
-  if (pipelineStarted(snapshot) && latest?.nodeId) nodes.add(latest.nodeId);
+  if ((pipelineStarted(snapshot) || latest?.kind === "authorization-updated") && latest?.nodeId) nodes.add(latest.nodeId);
   return nodes;
 }
 
@@ -748,6 +789,7 @@ function pipelineStarted(snapshot: DemoSnapshot): boolean {
       "user-discovered",
       "trusted-connected",
       "pressure-progress",
+      "authorization-updated",
     ].includes(event.kind),
   );
 }

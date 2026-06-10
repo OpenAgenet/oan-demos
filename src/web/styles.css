@@ -270,6 +270,10 @@ button, select {
   border-left-color: #167a4a;
 }
 
+.event-authorization-updated {
+  border-left-color: #d59026;
+}
+
 .inspector-drawer {
   border: 1px solid #dbe2ea;
   border-radius: 7px;
@@ -501,6 +505,14 @@ tbody tr.active-row {
   word-break: break-all;
 }
 
+.graph-node .auth-state {
+  width: fit-content;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
 .graph-node em {
   display: inline-block;
   margin-top: 7px;
@@ -612,6 +624,29 @@ tbody tr.active-row {
 .graph-service-agent.status-running, .graph-service-agent.status-done, .graph-service-agent.status-active,
 .graph-user-agent.status-running, .graph-user-agent.status-done, .graph-user-agent.status-active {
   background: #fff0f3;
+}
+
+.graph-node.auth-unauthorized {
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
+  opacity: 0.72;
+}
+
+.graph-node.auth-authorized {
+  border-style: solid;
+  border-color: #136f63;
+  opacity: 1;
+}
+
+.graph-node.auth-authorized .auth-state {
+  background: #dff5ea;
+  color: #0f665b;
+}
+
+.graph-node.auth-unauthorized .auth-state {
+  background: #fff0f0;
+  color: #9b2f2f;
 }
 
 @media (max-width: 1080px) {

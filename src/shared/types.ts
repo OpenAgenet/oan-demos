@@ -3,7 +3,7 @@
 // Initial author: JINLIANG XU
 // Email: jlxufly@gmail.com
 
-export type DemoScenarioId = "service-agent" | "mixed-four" | "mixed-1000";
+export type DemoScenarioId = "service-agent" | "mixed-four" | "mixed-1000" | "authorization-history";
 
 export type DemoEventKind =
   | "topology"
@@ -19,6 +19,7 @@ export type DemoEventKind =
   | "user-discovered"
   | "trusted-connected"
   | "pressure-progress"
+  | "authorization-updated"
   | "scenario-completed"
   | "scenario-failed"
   | "log";
@@ -30,6 +31,8 @@ export interface DemoNode {
   did?: string;
   endpoint?: string;
   status?: "idle" | "starting" | "running" | "done" | "error";
+  authorizationStatus?: "authorized" | "unauthorized";
+  authorizationNote?: string;
   domains?: string[];
 }
 

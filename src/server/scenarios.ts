@@ -55,7 +55,7 @@ import {
   waitForHttpHealth,
 } from "../../../oan-examples/scripts/bench/example-flows.js";
 
-const scenarioIds = new Set(["service-agent", "mixed-four", "mixed-1000"]);
+const scenarioIds = new Set(["service-agent", "mixed-four", "mixed-1000", "authorization-history"]);
 const demoDomains = ["genesis.openagenet.local", "openagenet.local"];
 
 interface DemoRuntime {
@@ -103,7 +103,29 @@ export async function runScenario(rawScenarioId: string, bus: DemoEventBus): Pro
   }
   const scenarioId = rawScenarioId as DemoScenarioId;
   bus.reset(scenarioId);
-  bus.emit({ kind: "scenario-started", scenarioId, title: scenarioTitle(scenarioId), message: "Preparing local OAN topology" });
+  bus.emit({
+    kind: "scenario-started",
+    scenarioId,
+    title: scenarioTitle(scenarioId),
+    message: scenarioId === "authorization-history" ? "Replaying chain governance history" : "Preparing local OAN topology",
+  });
+  if (scenarioId === "authorization-history") {
+    try {
+      await runAuthorizationHistoryScenario(scenarioId, bus);
+      bus.emit({ kind: "scenario-completed", scenarioId, title: "Scenario completed", message: "Authorization history replay completed" });
+    } catch (error) {
+      bus.emit({
+        kind: "scenario-failed",
+        scenarioId,
+        title: "Scenario failed",
+        message: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    } finally {
+      bus.finish();
+    }
+    return;
+  }
   const context = prepareContext(scenarioId, bus);
   try {
     await startContext(context, bus);
@@ -132,7 +154,153 @@ export async function runScenario(rawScenarioId: string, bus: DemoEventBus): Pro
 function scenarioTitle(scenarioId: DemoScenarioId): string {
   if (scenarioId === "service-agent") return "Service Agent registration and trusted connection";
   if (scenarioId === "mixed-four") return "Four OAN resource types";
+  if (scenarioId === "authorization-history") return "Chain authorization history replay";
   return "1000 mixed resources pipeline";
+}
+
+interface AuthorizationReplayEvent {
+  time: string;
+  proposalId: string;
+  eventSequence: string;
+  nodeId: "root" | "registrar-1" | "registrar-2" | "registrar-3" | "discovery-1" | "discovery-2";
+  nodeName: string;
+  role: string;
+  action: "authorized" | "unauthorized" | "unchanged";
+  label: string;
+  note: string;
+}
+
+async function runAuthorizationHistoryScenario(scenarioId: DemoScenarioId, bus: DemoEventBus): Promise<void> {
+  bus.setTopology(authorizationTopologyNodes(), scenarioId);
+  const events = authorizationReplayEvents();
+  bus.setStats({ total: events.length, current: 0, authorized: 0 });
+  await sleep(1000);
+  for (let index = 0; index < events.length; index++) {
+    const event = events[index];
+    const patch: Partial<DemoNode> = {
+      authorizationNote: `${event.label}: ${event.note}`,
+    };
+    if (event.action === "authorized") {
+      patch.authorizationStatus = "authorized";
+      patch.status = "running";
+    } else if (event.action === "unauthorized") {
+      patch.authorizationStatus = "unauthorized";
+      patch.status = "idle";
+    }
+    const currentNodes = bus.getSnapshot().nodes.map((node) => (node.id === event.nodeId ? { ...node, ...patch } : node));
+    const authorized = currentNodes.filter((node) => node.authorizationStatus === "authorized").length;
+    bus.updateNodeAuthorization(
+      event.nodeId,
+      patch,
+      scenarioId,
+      `${event.nodeName} ${event.label}`,
+      `${event.time}; proposal ${event.proposalId}; event ${event.eventSequence}; ${event.note}`,
+      {
+        total: events.length,
+        current: index + 1,
+        authorized,
+        latestProposalId: event.proposalId,
+        latestEventSequence: event.eventSequence,
+      },
+    );
+    await sleep(1000);
+  }
+}
+
+function authorizationTopologyNodes(): DemoNode[] {
+  const genesisRoot = path.resolve(process.cwd(), "..", "oan-design-docs", "genesis", "nodes");
+  const readDid = (name: string): string | undefined => {
+    const didPath = path.join(genesisRoot, name, "did-document.json");
+    return fs.existsSync(didPath) ? String(readJson<any>(didPath).id) : undefined;
+  };
+  return [
+    {
+      id: "root",
+      label: "Root",
+      kind: "root",
+      did: readDid("genesis-root"),
+      endpoint: "Trust anchor",
+      status: "idle",
+      authorizationStatus: "unauthorized",
+      authorizationNote: "Waiting for replay",
+    },
+    ...[1, 2, 3].map((index) => ({
+      id: `registrar-${index}`,
+      label: `Registrar ${index}`,
+      kind: "registrar" as const,
+      did: readDid(`genesis-registrar-${index}`),
+      endpoint: `https://registrar-${index}.genesis.openagenet.local`,
+      status: "idle" as const,
+      authorizationStatus: "unauthorized" as const,
+      authorizationNote: "Waiting for replay",
+    })),
+    {
+      id: "cdn",
+      label: "CDN",
+      kind: "cdn",
+      endpoint: "Not governed in replay",
+      status: "idle",
+      authorizationNote: "Outside chain authorization replay",
+    },
+    ...[1, 2].map((index) => ({
+      id: `discovery-${index}`,
+      label: `Discovery ${index}`,
+      kind: "discovery" as const,
+      did: readDid(`genesis-discovery-${index}`),
+      endpoint: `https://discovery-${index}.genesis.openagenet.local`,
+      domains: demoDomains,
+      status: "idle" as const,
+      authorizationStatus: "unauthorized" as const,
+      authorizationNote: "Waiting for replay",
+    })),
+    {
+      id: "service-agent",
+      label: "Service Agent",
+      kind: "service-agent",
+      endpoint: "Not governed in replay",
+      status: "idle",
+      authorizationNote: "Outside chain authorization replay",
+    },
+    {
+      id: "user-agent",
+      label: "User Agent",
+      kind: "user-agent",
+      status: "idle",
+      authorizationNote: "Outside chain authorization replay",
+    },
+  ];
+}
+
+function authorizationReplayEvents(): AuthorizationReplayEvent[] {
+  return [
+    { time: "2026-06-04 confirmed", proposalId: "-", eventSequence: "-", nodeId: "root", nodeName: "Root", role: "root", action: "authorized", label: "authorized", note: "Root trust anchor active" },
+    { time: "2026-06-04 confirmed", proposalId: "1", eventSequence: "not recorded", nodeId: "registrar-1", nodeName: "genesis-registrar-1 legacy DID", role: "registrar", action: "authorized", label: "authorized", note: "Legacy did:oan:REG:* authorization" },
+    { time: "2026-06-04 confirmed", proposalId: "2", eventSequence: "not recorded", nodeId: "registrar-2", nodeName: "genesis-registrar-2 legacy DID", role: "registrar", action: "authorized", label: "authorized", note: "Legacy DID authorization" },
+    { time: "2026-06-04 confirmed", proposalId: "3", eventSequence: "not recorded", nodeId: "registrar-3", nodeName: "genesis-registrar-3 legacy DID", role: "registrar", action: "authorized", label: "authorized", note: "Legacy DID authorization" },
+    { time: "2026-06-04 confirmed", proposalId: "4", eventSequence: "not recorded", nodeId: "discovery-1", nodeName: "genesis-discovery-1 legacy DID", role: "discovery", action: "authorized", label: "authorized", note: "Legacy did:oan:DISC:* authorization" },
+    { time: "2026-06-04 confirmed", proposalId: "5", eventSequence: "not recorded", nodeId: "discovery-2", nodeName: "genesis-discovery-2 legacy DID", role: "discovery", action: "authorized", label: "authorized", note: "Legacy DID authorization" },
+    { time: "2026-06-04 confirmed", proposalId: "6", eventSequence: "6", nodeId: "registrar-1", nodeName: "genesis-registrar-1", role: "registrar", action: "authorized", label: "authorized", note: "Normalized did:oan:INRG:* DID" },
+    { time: "2026-06-04 confirmed", proposalId: "7", eventSequence: "7", nodeId: "registrar-2", nodeName: "genesis-registrar-2", role: "registrar", action: "authorized", label: "authorized", note: "Normalized DID" },
+    { time: "2026-06-04 confirmed", proposalId: "8", eventSequence: "8", nodeId: "registrar-3", nodeName: "genesis-registrar-3", role: "registrar", action: "authorized", label: "authorized", note: "Normalized DID" },
+    { time: "2026-06-04 confirmed", proposalId: "9", eventSequence: "9", nodeId: "discovery-1", nodeName: "genesis-discovery-1", role: "discovery", action: "authorized", label: "authorized", note: "Domains: genesis.openagenet.local, openagenet.local" },
+    { time: "2026-06-04 confirmed", proposalId: "10", eventSequence: "10", nodeId: "discovery-2", nodeName: "genesis-discovery-2", role: "discovery", action: "authorized", label: "authorized", note: "Domains: genesis.openagenet.local, openagenet.local" },
+    { time: "2026-06-04 confirmed", proposalId: "11", eventSequence: "11", nodeId: "registrar-1", nodeName: "genesis-registrar-1 legacy DID", role: "registrar", action: "unchanged", label: "legacy revoked", note: "Legacy REG DID revoked; normalized DID remains authorized" },
+    { time: "2026-06-04 confirmed", proposalId: "12", eventSequence: "12", nodeId: "registrar-2", nodeName: "genesis-registrar-2 legacy DID", role: "registrar", action: "unchanged", label: "legacy revoked", note: "Legacy REG DID revoked; normalized DID remains authorized" },
+    { time: "2026-06-04 confirmed", proposalId: "13", eventSequence: "13", nodeId: "registrar-3", nodeName: "genesis-registrar-3 legacy DID", role: "registrar", action: "unchanged", label: "legacy revoked", note: "Legacy REG DID revoked; normalized DID remains authorized" },
+    { time: "2026-06-04 confirmed", proposalId: "14", eventSequence: "14", nodeId: "discovery-1", nodeName: "genesis-discovery-1 legacy DID", role: "discovery", action: "unchanged", label: "legacy revoked", note: "Legacy DISC DID revoked; normalized DID remains authorized" },
+    { time: "2026-06-04 confirmed", proposalId: "15", eventSequence: "15", nodeId: "discovery-2", nodeName: "genesis-discovery-2 legacy DID", role: "discovery", action: "unchanged", label: "legacy revoked", note: "Legacy DISC DID revoked; normalized DID remains authorized" },
+    { time: "2026-06-04 audit", proposalId: "16-20", eventSequence: "-", nodeId: "root", nodeName: "5 active nodes", role: "registrar/discovery", action: "unchanged", label: "duplicate rejected", note: "Contract rejected duplicate authorize attempts for active subjects" },
+    { time: "2026-06-04 audit", proposalId: "21", eventSequence: "16", nodeId: "registrar-1", nodeName: "genesis-registrar-1", role: "registrar", action: "unauthorized", label: "suspended", note: "DID Document metadata refresh" },
+    { time: "2026-06-04 audit", proposalId: "22", eventSequence: "17", nodeId: "registrar-1", nodeName: "genesis-registrar-1", role: "registrar", action: "authorized", label: "recovered", note: "Current active event" },
+    { time: "2026-06-04 audit", proposalId: "23", eventSequence: "18", nodeId: "registrar-2", nodeName: "genesis-registrar-2", role: "registrar", action: "unauthorized", label: "suspended", note: "DID document refresh" },
+    { time: "2026-06-04 audit", proposalId: "24", eventSequence: "19", nodeId: "registrar-2", nodeName: "genesis-registrar-2", role: "registrar", action: "authorized", label: "recovered", note: "Current active event" },
+    { time: "2026-06-04 audit", proposalId: "25", eventSequence: "20", nodeId: "registrar-3", nodeName: "genesis-registrar-3", role: "registrar", action: "unauthorized", label: "suspended", note: "DID document refresh" },
+    { time: "2026-06-04 audit", proposalId: "26", eventSequence: "21", nodeId: "registrar-3", nodeName: "genesis-registrar-3", role: "registrar", action: "authorized", label: "recovered", note: "Current active event" },
+    { time: "2026-06-04 audit", proposalId: "27", eventSequence: "22", nodeId: "discovery-1", nodeName: "genesis-discovery-1", role: "discovery", action: "unauthorized", label: "suspended", note: "DID document refresh; authorized domains retained on-chain" },
+    { time: "2026-06-04 audit", proposalId: "28", eventSequence: "23", nodeId: "discovery-1", nodeName: "genesis-discovery-1", role: "discovery", action: "authorized", label: "recovered", note: "Current active event" },
+    { time: "2026-06-04 audit", proposalId: "29", eventSequence: "24", nodeId: "discovery-2", nodeName: "genesis-discovery-2", role: "discovery", action: "unauthorized", label: "suspended", note: "DID document refresh; authorized domains retained on-chain" },
+    { time: "2026-06-04 audit", proposalId: "30", eventSequence: "25", nodeId: "discovery-2", nodeName: "genesis-discovery-2", role: "discovery", action: "authorized", label: "recovered", note: "Current active event" },
+  ];
 }
 
 function prepareContext(scenarioId: DemoScenarioId, bus: DemoEventBus): DemoContext {
