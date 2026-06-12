@@ -185,7 +185,22 @@ function App() {
             <p>{brand.slogan}</p>
           </div>
         </div>
-        <div className="run-controls">
+      </header>
+      {toast ? <div className="toast">{toast}</div> : null}
+
+      <section className="metrics-strip">
+        <Metric icon={<Network />} label="Nodes" value={displaySnapshot.nodes.length} className="metric-nodes" />
+        <Metric icon={<Boxes />} label="Resources" value={displaySnapshot.resources.length} className="metric-resources" />
+        <Metric icon={<ShieldCheck />} label="Artifacts" value={displaySnapshot.artifacts.length} className="metric-artifacts" />
+        <Metric icon={<Activity />} label="Events" value={displaySnapshot.events.length} className="metric-events" />
+        <Metric
+          icon={<Zap />}
+          label="Accepted"
+          value={String(displaySnapshot.stats.accepted ?? displaySnapshot.stats.rootLatest ?? "-")}
+          className="metric-accepted"
+        />
+        <FlowBanner snapshot={displaySnapshot} />
+        <div className="run-controls run-controls-inline">
           <select
             value={selectedScenario}
             onMouseDown={(event) => {
@@ -209,21 +224,11 @@ function App() {
               </option>
             ))}
           </select>
-          <button onClick={runScenario} aria-disabled={isBusy}>
+          <button onClick={runScenario} aria-disabled={isBusy} aria-label="Run selected scenario" title="Run selected scenario">
             <Play size={16} />
             Run
           </button>
         </div>
-      </header>
-      {toast ? <div className="toast">{toast}</div> : null}
-
-      <section className="metrics-strip">
-        <Metric icon={<Network />} label="Nodes" value={displaySnapshot.nodes.length} />
-        <Metric icon={<Boxes />} label="Resources" value={displaySnapshot.resources.length} />
-        <Metric icon={<ShieldCheck />} label="Artifacts" value={displaySnapshot.artifacts.length} />
-        <Metric icon={<Activity />} label="Events" value={displaySnapshot.events.length} />
-        <Metric icon={<Zap />} label="Accepted" value={String(displaySnapshot.stats.accepted ?? displaySnapshot.stats.rootLatest ?? "-")} />
-        <FlowBanner snapshot={displaySnapshot} />
       </section>
 
       <section className="workspace">
@@ -876,9 +881,19 @@ function shortDid(did: string): string {
   return `${did.slice(0, 14)}...${did.slice(-6)}`;
 }
 
-function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
+function Metric({
+  icon,
+  label,
+  value,
+  className,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="metric">
+    <div className={`metric ${className ?? ""}`.trim()}>
       {icon}
       <span>{label}</span>
       <strong>{value}</strong>
@@ -895,7 +910,7 @@ function FlowBanner({ snapshot }: { snapshot: DemoSnapshot }) {
   const percent = total > 0 ? Math.round((current / total) * 100) : snapshot.running ? 12 : 100;
   const phase = snapshot.running && !pipelineStarted(snapshot) ? "Starting Nodes" : snapshot.running ? "Running" : "Ready";
   return (
-    <div className="flow-banner">
+    <div className="flow-banner flow-banner-ready">
       <div>
         <strong>{phase}</strong>
         <span>{latest?.title ?? "Select a scenario and run it"}</span>
