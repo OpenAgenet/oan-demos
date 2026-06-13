@@ -38,6 +38,55 @@ button, select {
   gap: 16px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.site-nav, .lang-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid #dbe2ea;
+  border-radius: 999px;
+  background: white;
+}
+
+.site-nav button {
+  border: 0;
+  background: transparent;
+  color: #516173;
+  border-radius: 999px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.site-nav button.active {
+  background: #136f63;
+  color: white;
+}
+
+.lang-select {
+  padding: 4px 8px;
+}
+
+.lang-select select {
+  border: 0;
+  background: transparent;
+  color: #16324f;
+  padding: 2px 0;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 58px;
+}
+
+.lang-select select:focus {
+  outline: none;
+}
+
 .brand-lockup {
   display: flex;
   align-items: center;
@@ -127,6 +176,165 @@ button, select {
 .run-controls button[aria-disabled="true"], .run-controls select[aria-disabled="true"] {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.home-page {
+  display: grid;
+  gap: 14px;
+}
+
+.home-header {
+  padding: 6px 2px 0;
+}
+
+.home-header h2 {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.08;
+}
+
+.home-header p {
+  max-width: 980px;
+  color: #536174;
+}
+
+.home-actions {
+  margin-top: 18px;
+}
+
+.home-primary {
+  height: 42px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 18px;
+  background: #136f63;
+  color: white;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.architecture-section {
+  border: 1px solid #dbe2ea;
+  border-radius: 10px;
+  background: white;
+  padding: 18px;
+}
+
+.home-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.architecture-diagram {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.architecture-diagram-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+}
+
+.arch-node {
+  width: 100%;
+  max-width: 220px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #dbe2ea;
+  background: #fbfdff;
+  text-align: center;
+}
+
+.arch-node strong, .arch-node span {
+  display: block;
+}
+
+.arch-node strong {
+  color: #16324f;
+}
+
+.arch-node span {
+  margin-top: 4px;
+  color: #5b6778;
+  font-size: 12px;
+}
+
+.arch-governance {
+  background: #fff7e8;
+}
+
+.arch-root {
+  background: #fff4e8;
+}
+
+.arch-root-compact {
+  max-width: 210px;
+}
+
+.arch-registrar {
+  background: #f6f0ff;
+}
+
+.arch-discovery {
+  background: #ecf6ff;
+}
+
+.arch-provider, .arch-consumer {
+  background: #fdfefe;
+}
+
+.arch-line {
+  background: linear-gradient(180deg, #9db2c7, #d4dee9);
+}
+
+.arch-line-vertical {
+  width: 2px;
+  height: 20px;
+}
+
+.arch-middle, .arch-bottom {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.home-value-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.home-card {
+  padding: 18px;
+}
+
+.home-card h3 {
+  margin: 0 0 8px;
+}
+
+.home-card p {
+  margin: 0;
+  color: #5b6778;
+  line-height: 1.5;
+}
+
+.home-advantage-list {
+  margin: 16px 0 0;
+  padding-left: 18px;
+  color: #516173;
+}
+
+.home-advantage-list li + li {
+  margin-top: 8px;
 }
 
 .metrics-strip {
@@ -777,6 +985,16 @@ tbody tr.active-row {
 
 @media (max-width: 1080px) {
   .workspace, .lower-grid, .metrics-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar, .topbar-actions {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .home-main-grid, .home-value-grid {
     grid-template-columns: 1fr;
   }
 

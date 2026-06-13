@@ -8,14 +8,178 @@ import { createRoot } from "react-dom/client";
 import { Activity, Boxes, ChevronDown, ChevronRight, Network, Play, ShieldCheck, Zap } from "lucide-react";
 import type { DemoArtifact, DemoEvent, DemoNode, DemoResource, DemoScenarioId, DemoSnapshot } from "../shared/types.js";
 import oanLogoUrl from "./assets/oan-logo.png";
+import oanFrameworkHomeUrl from "./assets/oan-framework-home.svg";
+import oanFrameworkHomeCnUrl from "./assets/oan-framework-home-cn.svg";
 import brand from "./assets/slogan.json";
 import "./styles.css";
 
-const scenarioLabels: Record<DemoScenarioId, string> = {
-  "authorization-history": "Auth History",
-  "service-agent": "One Agent",
-  "mixed-four": "Four Resources",
-  "mixed-1000": "1000 Mixed",
+type PageId = "home" | "demos";
+type Locale = "en" | "zh";
+
+const scenarioLabels: Record<Locale, Record<DemoScenarioId, string>> = {
+  en: {
+    "authorization-history": "Auth History",
+    "service-agent": "One Agent",
+    "mixed-four": "Four Resources",
+    "mixed-1000": "1000 Mixed",
+  },
+  zh: {
+    "authorization-history": "授权历史",
+    "service-agent": "单智能体",
+    "mixed-four": "四类资源",
+    "mixed-1000": "1000 混合资源",
+  },
+};
+
+const uiText = {
+  en: {
+    navHome: "Home",
+    navDemos: "Demos",
+    language: "Language",
+    langEn: "EN",
+    langZh: "中文",
+    homeTitle: "A trust-governed infrastructure layer for agent resources",
+    homeLead:
+      "OAN places governance, identity, publication, discovery, and verification into one protocol-neutral infrastructure layer, so heterogeneous agent resources can be exposed with verifiable trust before invocation.",
+    homeGovernanceCaption: "Governance-state visibility",
+    homeRootCaption: "Verification and operational trust",
+    homeRegistrarCaption: "Onboarding and signed submission",
+    homeDiscoveryCaption: "Trusted search and signed candidates",
+    homeProviderCaption: "Resource providers publish",
+    homeConsumerCaption: "Resource consumers verify before use",
+    homeAdvantagesTitle: "How the roles work together",
+    homeAdvantagesLead: "",
+    homeAdvantages: [
+      "Governance Layer: defines who may participate in the infrastructure and provides the policy basis for later authorization decisions.",
+      "Root Node: turns governed trust into operational trust by authorizing service nodes and controlling what can enter the publishable network path.",
+      "Registrar Nodes: handle onboarding for service-side resources, verify submissions, and forward accepted registrations into the Root-controlled flow.",
+      "Discovery Nodes: return trusted candidates to consumers, so discovery follows authorized publication rather than self-asserted listing.",
+      "Service Agents: publish resources through the governed registration path instead of exposing themselves directly to open discovery.",
+      "User Agents: discover first, verify trust context, and invoke only after the infrastructure path has produced credible results.",
+    ],
+    homePrimary: "Open Demos",
+    runningWait: "Running, Wait",
+    starting: "Starting",
+    launchTopology: "Launching local OAN topology",
+    anotherRunning: "Another scenario is already running",
+    runRequestFailed: "Run request failed",
+    nodes: "Nodes",
+    resources: "Resources",
+    artifacts: "Artifacts",
+    events: "Events",
+    accepted: "Accepted",
+    ready: "Ready",
+    running: "Running",
+    startingNodes: "Starting Nodes",
+    selectAndRun: "Select a scenario and run it",
+    runScenario: "Run",
+    runScenarioTitle: "Run selected scenario",
+    timeline: "Timeline",
+    drawerResources: "Resources",
+    drawerArtifacts: "Artifacts",
+    drawerDetails: "Details",
+    tableName: "Name",
+    tableType: "Type",
+    tableStage: "Stage",
+    tableDid: "DID",
+    mixed1000Empty:
+      "1000 Mixed shows aggregate pressure counters only; individual resource rows are intentionally not retained.",
+    resourcesEmpty: "No resources captured for this scenario yet.",
+    artifactsEmpty: "No artifacts captured for this view.",
+    detailsPrompt: "Open Resources or Artifacts and select one item to inspect its details.",
+    detailResourceDid: "Resource DID Document",
+    detailResource: "Resource",
+    detailArtifact: "Artifact",
+    topologyAria: "OAN demo topology",
+    slogan: "Open infrastructure for trusted Agent interconnection",
+    termRoot: "Root",
+    termRegistrar: "Registrar",
+    termDiscovery: "Discovery",
+    termCdn: "CDN",
+    termServiceAgent: "Service Agent",
+    termUserAgent: "User Agent",
+    termGovernance: "Onchain Governance",
+    trustAnchor: "Trust anchor",
+    waitingReplay: "Waiting for replay",
+    notGovernedReplay: "Not governed in replay",
+    outsideReplay: "Outside chain authorization replay",
+  },
+  zh: {
+    navHome: "首页",
+    navDemos: "演示",
+    language: "语言",
+    langEn: "EN",
+    langZh: "中文",
+    homeTitle: "面向智能体资源的可信治理基础设施层",
+    homeLead:
+      "OAN 致力于为智能体互联网构建一层开放、可信、可治理的基础设施底座，将治理、身份、发布、发现与校验统一起来，让异构智能体资源在被连接、被发现、被调用之前，先具备可验证、可审计、可跨域协作的信任基础。",
+    homeGovernanceCaption: "治理状态可见",
+    homeRootCaption: "校验与运行信任",
+    homeRegistrarCaption: "接入与签名提交",
+    homeDiscoveryCaption: "可信搜索与签名候选集",
+    homeProviderCaption: "资源提供方发布资源",
+    homeConsumerCaption: "资源使用前先校验",
+    homeAdvantagesTitle: "OAN 优势",
+    homeAdvantagesLead:
+      "这里将“架构价值”和“差异化价值”合并为一组统一优势，突出 OAN 作为可信资源基础设施层的核心能力。",
+    homeAdvantages: [
+      "根节点、注册节点和发现节点职责分离，使信任边界清晰且可审计。",
+      "先治理，再做基础设施授权，使服务节点生命周期和撤销状态始终可见。",
+      "先建立资源身份，再进入目录暴露，减少弱信任目录挂牌行为。",
+      "先经根节点接收，再对外发布，使资源曝光建立在校验之后，而不是自我声明之后。",
+      "先做校验，再做调用，支持更安全的连接前决策。",
+      "支持多运营方和跨域信任协作。",
+      "统一覆盖服务智能体、技能、MCP Server 和 Tool/API 资源。",
+      "在信任建立后允许原生协议继续运行，而不是强制替换现有协议。",
+      "让发现能力始终受授权域和可验证证据约束。",
+      "提供面向开放标准的信任层，而不是封闭平台。",
+    ],
+    homePrimary: "进入演示",
+    runningWait: "正在运行，请稍候",
+    starting: "启动",
+    launchTopology: "正在拉起本地 OAN 拓扑",
+    anotherRunning: "已有其它场景正在运行",
+    runRequestFailed: "运行请求失败",
+    nodes: "节点",
+    resources: "资源",
+    artifacts: "产物",
+    events: "事件",
+    accepted: "已接收",
+    ready: "就绪",
+    running: "运行中",
+    startingNodes: "正在启动节点",
+    selectAndRun: "请选择一个场景并启动",
+    runScenario: "运行",
+    runScenarioTitle: "运行所选场景",
+    timeline: "时间线",
+    drawerResources: "资源",
+    drawerArtifacts: "产物",
+    drawerDetails: "详情",
+    tableName: "名称",
+    tableType: "类型",
+    tableStage: "阶段",
+    tableDid: "DID",
+    mixed1000Empty: "1000 Mixed 只展示聚合压测计数器，不保留单条资源明细。",
+    resourcesEmpty: "当前场景尚未采集到资源。",
+    artifactsEmpty: "当前视图尚未采集到产物。",
+    detailsPrompt: "打开“资源”或“产物”，再选择一项查看其详情。",
+    detailResourceDid: "资源 DID 文档",
+    detailResource: "资源",
+    detailArtifact: "产物",
+    topologyAria: "OAN 演示拓扑",
+    slogan: "可信智能体互联的开放基础设施",
+    termRoot: "根节点",
+    termRegistrar: "注册节点",
+    termDiscovery: "发现节点",
+    termCdn: "CDN",
+    termServiceAgent: "服务智能体",
+    termUserAgent: "用户智能体",
+    termGovernance: "链上治理层",
+    trustAnchor: "信任锚",
+    waitingReplay: "等待回放",
+    notGovernedReplay: "不在回放治理范围内",
+    outsideReplay: "不在链上授权回放范围内",
+  },
 };
 
 type SelectedDetail =
@@ -32,6 +196,8 @@ const initialSnapshot: DemoSnapshot = {
 };
 
 function App() {
+  const [page, setPage] = useState<PageId>(() => currentPageFromHash());
+  const [locale, setLocale] = useState<Locale>("en");
   const [snapshot, setSnapshot] = useState<DemoSnapshot>(initialSnapshot);
   const [selectedDetail, setSelectedDetail] = useState<SelectedDetail | null>(null);
   const [selectedScenario, setSelectedScenario] = useState<DemoScenarioId>("authorization-history");
@@ -98,9 +264,20 @@ function App() {
     }
   }, [snapshot.activeScenario]);
 
+  useEffect(() => {
+    const onHashChange = () => setPage(currentPageFromHash());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
   const isBusy = snapshot.running || vcExchangeHolding;
+  const t = uiText[locale];
   const vcExchangeElapsedMs = vcExchangeStartedAt === null ? null : Math.max(0, vcExchangeFrameNow - vcExchangeStartedAt);
-  const displaySnapshot = useMemo(() => applyVcExchangePresentationHold(resetSnapshotForScenario(snapshot, selectedScenario), vcExchangeHolding), [snapshot, selectedScenario, vcExchangeHolding]);
+  const displaySnapshot = useMemo(() => {
+    const scenarioSnapshot = resetSnapshotForScenario(snapshot, selectedScenario);
+    const heldSnapshot = applyVcExchangePresentationHold(scenarioSnapshot, vcExchangeHolding);
+    return localizeSnapshot(heldSnapshot, locale);
+  }, [snapshot, selectedScenario, vcExchangeHolding, locale]);
   const graph = useMemo(() => buildGraph(displaySnapshot), [displaySnapshot]);
   const displayArtifacts = displaySnapshot.artifacts;
 
@@ -119,8 +296,8 @@ function App() {
       at: new Date().toISOString(),
       kind: "scenario-started",
       scenarioId: selectedScenario,
-      title: `Starting ${scenarioLabels[selectedScenario]}`,
-      message: "Launching local OAN topology",
+      title: `${t.starting} ${scenarioLabels[locale][selectedScenario]}`,
+      message: t.launchTopology,
     };
     setSnapshot((current) => ({
       ...resetSnapshotForScenario(current, selectedScenario, true),
@@ -140,7 +317,7 @@ function App() {
         at: new Date().toISOString(),
         kind: "scenario-failed",
         scenarioId: selectedScenario,
-        title: response.status === 409 ? "Another scenario is already running" : "Run request failed",
+        title: response.status === 409 ? t.anotherRunning : t.runRequestFailed,
         message: body.error ?? response.statusText,
       };
       setSnapshot((current) => ({
@@ -170,8 +347,13 @@ function App() {
   }
 
   function notifyRunning() {
-    setToast("Running, Wait");
+    setToast(t.runningWait);
     window.setTimeout(() => setToast(null), 1600);
+  }
+
+  function navigate(nextPage: PageId) {
+    window.location.hash = nextPage === "home" ? "#home" : "#demos";
+    setPage(nextPage);
   }
 
   return (
@@ -182,153 +364,169 @@ function App() {
           <div>
             <strong>{brand.abbreviation}</strong>
             <h1>{brand.productName}</h1>
-            <p>{brand.slogan}</p>
+            <p>{t.slogan}</p>
           </div>
+        </div>
+        <div className="topbar-actions">
+          <nav className="site-nav" aria-label="Primary">
+            <button className={page === "home" ? "active" : ""} onClick={() => navigate("home")}>{t.navHome}</button>
+            <button className={page === "demos" ? "active" : ""} onClick={() => navigate("demos")}>{t.navDemos}</button>
+          </nav>
+          <label className="lang-select" aria-label={t.language}>
+            <select value={locale} onChange={(event) => setLocale(event.target.value as Locale)}>
+              <option value="en">{t.langEn}</option>
+              <option value="zh">{t.langZh}</option>
+            </select>
+          </label>
         </div>
       </header>
       {toast ? <div className="toast">{toast}</div> : null}
 
-      <section className="metrics-strip">
-        <Metric icon={<Network />} label="Nodes" value={displaySnapshot.nodes.length} className="metric-nodes" />
-        <Metric icon={<Boxes />} label="Resources" value={displaySnapshot.resources.length} className="metric-resources" />
-        <Metric icon={<ShieldCheck />} label="Artifacts" value={displaySnapshot.artifacts.length} className="metric-artifacts" />
-        <Metric icon={<Activity />} label="Events" value={displaySnapshot.events.length} className="metric-events" />
-        <Metric
-          icon={<Zap />}
-          label="Accepted"
-          value={String(displaySnapshot.stats.accepted ?? displaySnapshot.stats.rootLatest ?? "-")}
-          className="metric-accepted"
-        />
-        <FlowBanner snapshot={displaySnapshot} />
-        <div className="run-controls run-controls-inline">
-          <select
-            value={selectedScenario}
-            onMouseDown={(event) => {
-              if (isBusy) {
-                event.preventDefault();
-                notifyRunning();
-              }
-            }}
-            onKeyDown={(event) => {
-              if (isBusy) {
-                event.preventDefault();
-                notifyRunning();
-              }
-            }}
-            onChange={(event) => changeScenario(event.target.value as DemoScenarioId)}
-            aria-disabled={isBusy}
-          >
-            {Object.entries(scenarioLabels).map(([id, label]) => (
-              <option key={id} value={id}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <button onClick={runScenario} aria-disabled={isBusy} aria-label="Run selected scenario" title="Run selected scenario">
-            <Play size={16} />
-            Run
-          </button>
-        </div>
-      </section>
+      {page === "home" ? (
+        <HomePage locale={locale} onOpenDemos={() => navigate("demos")} />
+      ) : (
+        <>
+          <section className="metrics-strip">
+            <Metric icon={<Network />} label={t.nodes} value={displaySnapshot.nodes.length} className="metric-nodes" />
+            <Metric icon={<Boxes />} label={t.resources} value={displaySnapshot.resources.length} className="metric-resources" />
+            <Metric icon={<ShieldCheck />} label={t.artifacts} value={displaySnapshot.artifacts.length} className="metric-artifacts" />
+            <Metric icon={<Activity />} label={t.events} value={displaySnapshot.events.length} className="metric-events" />
+            <Metric
+              icon={<Zap />}
+              label={t.accepted}
+              value={String(displaySnapshot.stats.accepted ?? displaySnapshot.stats.rootLatest ?? "-")}
+              className="metric-accepted"
+            />
+            <FlowBanner snapshot={displaySnapshot} labels={{ ready: t.ready, running: t.running, startingNodes: t.startingNodes, empty: t.selectAndRun }} />
+            <div className="run-controls run-controls-inline">
+              <select
+                value={selectedScenario}
+                onMouseDown={(event) => {
+                  if (isBusy) {
+                    event.preventDefault();
+                    notifyRunning();
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (isBusy) {
+                    event.preventDefault();
+                    notifyRunning();
+                  }
+                }}
+                onChange={(event) => changeScenario(event.target.value as DemoScenarioId)}
+                aria-disabled={isBusy}
+              >
+                {Object.entries(scenarioLabels[locale]).map(([id, label]) => (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <button onClick={runScenario} aria-disabled={isBusy} aria-label={t.runScenarioTitle} title={t.runScenarioTitle}>
+                <Play size={16} />
+                {t.runScenario}
+              </button>
+            </div>
+          </section>
 
-      <section className="workspace">
-        <div className={`topology-panel ${displaySnapshot.running ? "is-running" : ""}`}>
-          <TopologyGraph graph={graph} snapshot={displaySnapshot} vcExchangeElapsedMs={vcExchangeElapsedMs} />
-        </div>
+          <section className="workspace">
+            <div className={`topology-panel ${displaySnapshot.running ? "is-running" : ""}`}>
+              <TopologyGraph graph={graph} snapshot={displaySnapshot} vcExchangeElapsedMs={vcExchangeElapsedMs} ariaLabel={t.topologyAria} />
+            </div>
 
-        <aside className="side-panel">
-          <h2>Timeline</h2>
-          <div className="timeline">
-            {[...displaySnapshot.events].reverse().slice(0, 80).map((event) => (
-              <div key={event.id} className={`event event-${event.kind}`}>
-                <time>{new Date(event.at).toLocaleTimeString()}</time>
-                <strong>{event.title}</strong>
-                {event.message ? <span>{event.message}</span> : null}
+            <aside className="side-panel">
+              <h2>{t.timeline}</h2>
+              <div className="timeline">
+                {[...displaySnapshot.events].reverse().slice(0, 80).map((event) => (
+                  <div key={event.id} className={`event event-${event.kind}`}>
+                    <time>{new Date(event.at).toLocaleTimeString()}</time>
+                    <strong>{event.title}</strong>
+                    {event.message ? <span>{event.message}</span> : null}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </aside>
-      </section>
+            </aside>
+          </section>
 
-      <section className={`inspector-drawer ${openDrawer ? "is-open" : ""}`}>
-        <div className="drawer-tabs">
-          <DrawerTab id="resources" openDrawer={openDrawer} setOpenDrawer={setOpenDrawer} label="Resources" count={displaySnapshot.resources.length} />
-          <DrawerTab id="artifacts" openDrawer={openDrawer} setOpenDrawer={setOpenDrawer} label="Artifacts" count={displaySnapshot.artifacts.length} />
-          <DrawerTab id="details" openDrawer={openDrawer} setOpenDrawer={setOpenDrawer} label="Details" count={selectedDetail ? 1 : 0} />
-        </div>
+          <section className={`inspector-drawer ${openDrawer ? "is-open" : ""}`}>
+            <div className="drawer-tabs">
+              <DrawerTab id="resources" openDrawer={openDrawer} setOpenDrawer={setOpenDrawer} label={t.drawerResources} count={displaySnapshot.resources.length} />
+              <DrawerTab id="artifacts" openDrawer={openDrawer} setOpenDrawer={setOpenDrawer} label={t.drawerArtifacts} count={displaySnapshot.artifacts.length} />
+              <DrawerTab id="details" openDrawer={openDrawer} setOpenDrawer={setOpenDrawer} label={t.drawerDetails} count={selectedDetail ? 1 : 0} />
+            </div>
 
-        {openDrawer ? (
-          <div className="drawer-content">
-            {openDrawer === "resources" ? (
-              <div className="resource-panel">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Type</th>
-                      <th>Stage</th>
-                      <th>DID</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {displaySnapshot.resources.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="empty-cell">
-                          {displaySnapshot.activeScenario === "mixed-1000"
-                            ? "1000 Mixed shows aggregate pressure counters only; individual resource rows are intentionally not retained."
-                            : "No resources captured for this scenario yet."}
-                        </td>
-                      </tr>
-                    ) : displaySnapshot.resources.map((resource) => (
-                      <tr
-                        key={resource.did}
-                        className={selectedDetail?.kind === "resource" && selectedDetail.resource.did === resource.did ? "active-row" : ""}
-                        onClick={() => {
-                          setSelectedDetail({ kind: "resource", resource });
-                          setOpenDrawer("details");
-                        }}
-                      >
-                        <td><button className="link-button">{resource.name}</button></td>
-                        <td>{resource.type}</td>
-                        <td><span className={`stage stage-${resource.stage}`}>{resource.stage}</span></td>
-                        <td className="did-cell">{resource.did}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {openDrawer ? (
+              <div className="drawer-content">
+                {openDrawer === "resources" ? (
+                  <div className="resource-panel">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>{t.tableName}</th>
+                          <th>{t.tableType}</th>
+                          <th>{t.tableStage}</th>
+                          <th>{t.tableDid}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displaySnapshot.resources.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="empty-cell">
+                              {displaySnapshot.activeScenario === "mixed-1000" ? t.mixed1000Empty : t.resourcesEmpty}
+                            </td>
+                          </tr>
+                        ) : displaySnapshot.resources.map((resource) => (
+                          <tr
+                            key={resource.did}
+                            className={selectedDetail?.kind === "resource" && selectedDetail.resource.did === resource.did ? "active-row" : ""}
+                            onClick={() => {
+                              setSelectedDetail({ kind: "resource", resource });
+                              setOpenDrawer("details");
+                            }}
+                          >
+                            <td><button className="link-button">{resource.name}</button></td>
+                            <td>{resource.type}</td>
+                            <td><span className={`stage stage-${resource.stage}`}>{resource.stage}</span></td>
+                            <td className="did-cell">{resource.did}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+
+                {openDrawer === "artifacts" ? (
+                  <div className="artifact-panel">
+                    <div className="artifact-list">
+                      {displayArtifacts.length === 0 ? <p className="empty-panel">{t.artifactsEmpty}</p> : null}
+                      {displayArtifacts.map((artifact) => (
+                        <button
+                          key={artifact.id}
+                          onClick={() => {
+                            setSelectedDetail({ kind: "artifact", artifact });
+                            setOpenDrawer("details");
+                          }}
+                          className={selectedDetail?.kind === "artifact" && selectedDetail.artifact.id === artifact.id ? "active" : ""}
+                        >
+                          <span>{artifact.title}</span>
+                          <small>{artifact.kind}{artifact.sensitive ? " / sensitive" : ""}</small>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {openDrawer === "details" ? (
+                  <div className="detail-panel">
+                    {selectedDetail ? <DetailHeader selectedDetail={selectedDetail} artifacts={displayArtifacts} labels={{ resourceDid: t.detailResourceDid, resource: t.detailResource, artifact: t.detailArtifact }} /> : null}
+                    <pre>{selectedDetail ? JSON.stringify(detailValue(selectedDetail, displayArtifacts), null, 2) : t.detailsPrompt}</pre>
+                  </div>
+                ) : null}
               </div>
             ) : null}
-
-            {openDrawer === "artifacts" ? (
-              <div className="artifact-panel">
-                <div className="artifact-list">
-                  {displayArtifacts.length === 0 ? <p className="empty-panel">No artifacts captured for this view.</p> : null}
-                  {displayArtifacts.map((artifact) => (
-                    <button
-                      key={artifact.id}
-                      onClick={() => {
-                        setSelectedDetail({ kind: "artifact", artifact });
-                        setOpenDrawer("details");
-                      }}
-                      className={selectedDetail?.kind === "artifact" && selectedDetail.artifact.id === artifact.id ? "active" : ""}
-                    >
-                      <span>{artifact.title}</span>
-                      <small>{artifact.kind}{artifact.sensitive ? " / sensitive" : ""}</small>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {openDrawer === "details" ? (
-              <div className="detail-panel">
-                {selectedDetail ? <DetailHeader selectedDetail={selectedDetail} artifacts={displayArtifacts} /> : null}
-                <pre>{selectedDetail ? JSON.stringify(detailValue(selectedDetail, displayArtifacts), null, 2) : "Open Resources or Artifacts and select one item to inspect its details."}</pre>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </section>
+          </section>
+        </>
+      )}
     </main>
   );
 }
@@ -356,12 +554,95 @@ function DrawerTab({
   );
 }
 
-function DetailHeader({ selectedDetail, artifacts }: { selectedDetail: SelectedDetail; artifacts: DemoArtifact[] }) {
+function HomePage({ locale, onOpenDemos }: { locale: Locale; onOpenDemos: () => void }) {
+  const t = uiText[locale];
+  const architectureDiagramUrl = locale === "zh" ? oanFrameworkHomeCnUrl : oanFrameworkHomeUrl;
+  return (
+    <section className="home-page">
+      <div className="home-header">
+        <h2>{t.homeTitle}</h2>
+        <p>{t.homeLead}</p>
+        <div className="home-actions">
+          <button className="home-primary" onClick={onOpenDemos}>{t.homePrimary}</button>
+        </div>
+      </div>
+      <section className="home-main-grid">
+        <div className="architecture-section">
+          <div className="architecture-diagram" aria-label={t.homeTitle}>
+            <img src={architectureDiagramUrl} alt={t.homeTitle} className="architecture-diagram-image" />
+          </div>
+        </div>
+        <div className="home-value-grid">
+          <article className="home-card">
+            <h3>{t.homeAdvantagesTitle}</h3>
+            <p>{t.homeAdvantagesLead}</p>
+            <ul className="home-advantage-list">
+              {t.homeAdvantages.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </article>
+        </div>
+      </section>
+    </section>
+  );
+}
+
+function currentPageFromHash(): PageId {
+  return window.location.hash === "#demos" ? "demos" : "home";
+}
+
+function localizeSnapshot(snapshot: DemoSnapshot, locale: Locale): DemoSnapshot {
+  const t = uiText[locale];
+  return {
+    ...snapshot,
+    nodes: snapshot.nodes.map((node) => ({
+      ...node,
+      label: localizedNodeLabel(node.id, locale),
+      endpoint:
+        node.endpoint === "Trust anchor"
+          ? t.trustAnchor
+          : node.endpoint === "Not governed in replay"
+            ? t.notGovernedReplay
+            : node.endpoint,
+      authorizationNote:
+        node.authorizationNote === "Waiting for replay"
+          ? t.waitingReplay
+          : node.authorizationNote === "Outside chain authorization replay"
+            ? t.outsideReplay
+            : node.authorizationNote,
+    })),
+  };
+}
+
+function localizedNodeLabel(nodeId: string, locale: Locale): string {
+  const t = uiText[locale];
+  if (nodeId === "root") return t.termRoot;
+  if (nodeId === "cdn") return t.termCdn;
+  if (nodeId === "service-agent") return t.termServiceAgent;
+  if (nodeId === "user-agent") return t.termUserAgent;
+  if (nodeId === "onchain-governance") return t.termGovernance;
+  if (nodeId.startsWith("registrar-")) {
+    return `${t.termRegistrar} ${nodeId.split("-")[1] ?? ""}`.trim();
+  }
+  if (nodeId.startsWith("discovery-")) {
+    return `${t.termDiscovery} ${nodeId.split("-")[1] ?? ""}`.trim();
+  }
+  return nodeId;
+}
+
+function DetailHeader({
+  selectedDetail,
+  artifacts,
+  labels,
+}: {
+  selectedDetail: SelectedDetail;
+  artifacts: DemoArtifact[];
+  labels: { resourceDid: string; resource: string; artifact: string };
+}) {
   if (selectedDetail.kind === "resource") {
     const didDocument = findResourceDidDocument(selectedDetail.resource, artifacts);
     return (
       <div className="detail-header">
-        <span>{didDocument ? "Resource DID Document" : "Resource"}</span>
+        <span>{didDocument ? labels.resourceDid : labels.resource}</span>
         <strong>{selectedDetail.resource.name}</strong>
         <small>{selectedDetail.resource.did}</small>
       </div>
@@ -369,7 +650,7 @@ function DetailHeader({ selectedDetail, artifacts }: { selectedDetail: SelectedD
   }
   return (
     <div className="detail-header">
-      <span>Artifact</span>
+      <span>{labels.artifact}</span>
       <strong>{selectedDetail.artifact.title}</strong>
       <small>{selectedDetail.artifact.kind}{selectedDetail.artifact.resourceDid ? ` / ${selectedDetail.artifact.resourceDid}` : ""}</small>
     </div>
@@ -419,7 +700,17 @@ interface GraphEdgeOptions {
   targetPort?: GraphEdgeView["targetPort"];
 }
 
-function TopologyGraph({ graph, snapshot, vcExchangeElapsedMs }: { graph: { nodes: GraphNodeView[]; edges: GraphEdgeView[]; verticalOffsetPx: number }; snapshot: DemoSnapshot; vcExchangeElapsedMs: number | null }) {
+function TopologyGraph({
+  graph,
+  snapshot,
+  vcExchangeElapsedMs,
+  ariaLabel,
+}: {
+  graph: { nodes: GraphNodeView[]; edges: GraphEdgeView[]; verticalOffsetPx: number };
+  snapshot: DemoSnapshot;
+  vcExchangeElapsedMs: number | null;
+  ariaLabel: string;
+}) {
   const nodeMap = new Map(graph.nodes.map((node) => [node.id, node]));
   const baseEdges = graph.edges.filter((edge) => !edge.authorization);
   const authorizationEdges = graph.edges.filter((edge) => edge.authorization);
@@ -446,7 +737,7 @@ function TopologyGraph({ graph, snapshot, vcExchangeElapsedMs }: { graph: { node
     );
   };
   return (
-    <svg className="topology-svg" viewBox="0 -90 1250 680" role="img" aria-label="OAN demo topology">
+    <svg className="topology-svg" viewBox="0 -90 1250 680" role="img" aria-label={ariaLabel}>
       <defs>
         <marker id="arrow-default" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto" markerUnits="strokeWidth">
           <path d="M 0 0 L 5 2.5 L 0 5 z" />
@@ -901,19 +1192,25 @@ function Metric({
   );
 }
 
-function FlowBanner({ snapshot }: { snapshot: DemoSnapshot }) {
+function FlowBanner({
+  snapshot,
+  labels,
+}: {
+  snapshot: DemoSnapshot;
+  labels: { ready: string; running: string; startingNodes: string; empty: string };
+}) {
   const latest = snapshot.events[snapshot.events.length - 1];
   const stats = snapshot.stats;
   const total = Number(stats.total ?? 0);
   const accepted = Number(stats.accepted ?? 0);
   const current = Number(stats.current ?? accepted);
   const percent = total > 0 ? Math.round((current / total) * 100) : snapshot.running ? 12 : 100;
-  const phase = snapshot.running && !pipelineStarted(snapshot) ? "Starting Nodes" : snapshot.running ? "Running" : "Ready";
+  const phase = snapshot.running && !pipelineStarted(snapshot) ? labels.startingNodes : snapshot.running ? labels.running : labels.ready;
   return (
     <div className="flow-banner flow-banner-ready">
       <div>
         <strong>{phase}</strong>
-        <span>{latest?.title ?? "Select a scenario and run it"}</span>
+        <span>{latest?.title ?? labels.empty}</span>
       </div>
       <div className="flow-progress" aria-hidden="true">
         <span style={{ width: `${Math.min(100, percent)}%` }} />
