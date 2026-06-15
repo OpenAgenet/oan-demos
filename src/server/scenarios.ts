@@ -20,7 +20,7 @@ import {
   createResourceIdentity,
   ensureDir,
   ensurePostgresDatabasesFromConfigs,
-  ensureServiceBinaries,
+  ensureServiceBinariesAsync,
   getJson,
   listDiscoveryCandidates,
   loadIdentityMaterial,
@@ -129,8 +129,10 @@ export async function runScenario(rawScenarioId: string, bus: DemoEventBus): Pro
     }
     return;
   }
-  const context = prepareContext(scenarioId, bus);
+  bus.setTopology(runtimeTopologyNodes(scenarioId), scenarioId);
+  let context: DemoContext | undefined;
   try {
+    context = prepareContext(scenarioId, bus);
     await startContext(context, bus);
     if (scenarioId === "service-agent") {
       await runServiceAgentScenario(context, bus);
@@ -149,7 +151,7 @@ export async function runScenario(rawScenarioId: string, bus: DemoEventBus): Pro
     });
     throw error;
   } finally {
-    await stopContext(context);
+    if (context) await stopContext(context);
     bus.finish();
   }
 }
@@ -159,6 +161,17 @@ function scenarioTitle(scenarioId: DemoScenarioId): string {
   if (scenarioId === "mixed-four") return "Four OAN resource types";
   if (scenarioId === "authorization-history") return "Chain authorization history replay";
   return "1000 mixed resources pipeline";
+}
+
+function runtimeTopologyNodes(_scenarioId: DemoScenarioId): DemoNode[] {
+  return [
+    node("root", "Root", "root", undefined, runtime.rootPort),
+    ...runtime.registrarPorts.map((port, index) => node(`registrar-${index + 1}`, `Registrar ${index + 1}`, "registrar", undefined, port)),
+    node("cdn", "CDN", "cdn", undefined, runtime.cdnPort),
+    ...runtime.discoveryPorts.map((port, index) => node(`discovery-${index + 1}`, `Discovery ${index + 1}`, "discovery", undefined, port, demoDomains)),
+    node("service-agent", "Service Agent", "service-agent", undefined, runtime.serviceAgentPort),
+    node("user-agent", "User Agent", "user-agent", undefined, undefined),
+  ];
 }
 
 interface AuthorizationReplayEvent {
@@ -327,6 +340,19 @@ function prepareContext(scenarioId: DemoScenarioId, bus: DemoEventBus): DemoCont
   const discoveryIdentities = discoveries.map((dir, index) =>
     copyGenesisNodeIdentity(`genesis-discovery-${index + 1}`, dir, { endpoint: `http://localhost:${runtime.discoveryPorts[index]}` }),
   );
+  bus.setTopology(
+    [
+      node("root", "Root", "root", rootIdentity.did, runtime.rootPort),
+      ...registrarIdentities.map((identity, index) => node(`registrar-${index + 1}`, `Registrar ${index + 1}`, "registrar", identity.did, runtime.registrarPorts[index])),
+      node("cdn", "CDN", "cdn", undefined, runtime.cdnPort),
+      ...discoveryIdentities.map((identity, index) =>
+        node(`discovery-${index + 1}`, `Discovery ${index + 1}`, "discovery", identity.did, runtime.discoveryPorts[index], demoDomains),
+      ),
+      node("service-agent", "Service Agent", "service-agent", undefined, runtime.serviceAgentPort),
+      node("user-agent", "User Agent", "user-agent", undefined, undefined),
+    ],
+    scenarioId,
+  );
   seedRootBulletin(rootFixtureRoot, root, { cdnPort: runtime.cdnPort });
   writeGenesisAuthorizationState(root, { registrarDirs: registrars, discoveryDirs: discoveries, authorizedDomains: demoDomains });
   writeJson(path.join(root, "request-nonces.json"), { nonces: {} });
@@ -387,20 +413,6 @@ function prepareContext(scenarioId: DemoScenarioId, bus: DemoEventBus): DemoCont
     createNodeRuntime(environment.pidDir, "cdn-publisher", "cdn-publisher", path.join(config, "cdn-publisher.toml"), runtime.publisherPort),
   ];
 
-  bus.setTopology(
-    [
-      node("root", "Root", "root", rootIdentity.did, runtime.rootPort),
-      ...registrarIdentities.map((identity, index) => node(`registrar-${index + 1}`, `Registrar ${index + 1}`, "registrar", identity.did, runtime.registrarPorts[index])),
-      node("cdn", "CDN", "cdn", undefined, runtime.cdnPort),
-      ...discoveryIdentities.map((identity, index) =>
-        node(`discovery-${index + 1}`, `Discovery ${index + 1}`, "discovery", identity.did, runtime.discoveryPorts[index], demoDomains),
-      ),
-      node("service-agent", "Service Agent", "service-agent", undefined, runtime.serviceAgentPort),
-      node("user-agent", "User Agent", "user-agent", undefined, undefined),
-    ],
-    scenarioId,
-  );
-
   addNodeArtifacts(bus, scenarioId, "root", root);
   registrars.forEach((dir, index) => addNodeArtifacts(bus, scenarioId, `registrar-${index + 1}`, dir));
   discoveries.forEach((dir, index) => addNodeArtifacts(bus, scenarioId, `discovery-${index + 1}`, dir));
@@ -428,7 +440,8 @@ function node(id: string, label: string, kind: DemoNode["kind"], did?: string, p
 }
 
 async function startContext(context: DemoContext, bus: DemoEventBus): Promise<void> {
-  ensureServiceBinaries(["root-node", "registrar-node", "discovery-node", "cdn-node", "cdn-publisher"]);
+  bus.emit({ kind: "node-started", scenarioId: context.scenarioId, title: "Building service binaries", message: "Compiling changed Root, Registrar, Discovery, CDN, and publisher services" });
+  await ensureServiceBinariesAsync(["root-node", "registrar-node", "discovery-node", "cdn-node", "cdn-publisher"]);
   await startNats(context.natsRuntime, runtime.natsPort);
   bus.emit({ kind: "node-started", scenarioId: context.scenarioId, title: "NATS JetStream running", message: `Port ${runtime.natsPort}` });
   if (context.scenarioId === "service-agent") {

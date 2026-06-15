@@ -18,6 +18,7 @@ process.env.OAN_DESIGN_DOCS_ROOT ??= path.join(workspaceRoot, "oan-design-docs")
 process.env.OAN_GENESIS_NODES_ROOT ??= path.join(workspaceRoot, "oan-design-docs", "genesis", "nodes");
 process.env.OAN_AGENT_PY_ROOT ??= path.join(workspaceRoot, "oan-agent-py");
 process.env.OAN_BENCH_DB_BACKEND ??= "postgres";
+process.env.OAN_BENCH_SKIP_ENV_PREFLIGHT ??= "true";
 process.env.OAN_NATS_SERVER_PATH ??= path.join("D:", "ProgramFiles", "nats", "nats-server", "nats-server.exe");
 
 const bus = new DemoEventBus();
