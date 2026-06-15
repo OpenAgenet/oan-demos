@@ -22,12 +22,14 @@ const scenarioLabels: Record<Locale, Record<DemoScenarioId, string>> = {
     "service-agent": "One Agent",
     "mixed-four": "Four Resources",
     "mixed-1000": "1000 Mixed",
+    "agentic-commerce": "Agentic Commerce",
   },
   zh: {
     "authorization-history": "授权历史",
     "service-agent": "单智能体",
     "mixed-four": "四类资源",
     "mixed-1000": "1000 混合资源",
+    "agentic-commerce": "智能体商务",
   },
 };
 
@@ -209,6 +211,10 @@ function App() {
   const userSelectedScenario = useRef(false);
   const vcExchangeTimer = useRef<number | null>(null);
   const vcExchangeFrameTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   useEffect(() => {
     refreshSnapshot(setSnapshot, (incoming) => {
@@ -429,7 +435,7 @@ function App() {
             </div>
           </section>
 
-          <section className="workspace">
+          <section className={`workspace scenario-${displaySnapshot.activeScenario ?? "none"}`}>
             <div className={`topology-panel ${displaySnapshot.running ? "is-running" : ""}`}>
               <TopologyGraph graph={graph} snapshot={displaySnapshot} vcExchangeElapsedMs={vcExchangeElapsedMs} ariaLabel={t.topologyAria} />
             </div>
@@ -594,9 +600,23 @@ function localizeSnapshot(snapshot: DemoSnapshot, locale: Locale): DemoSnapshot 
   const t = uiText[locale];
   return {
     ...snapshot,
+    stats: { ...snapshot.stats, __locale: locale },
+    resources: snapshot.resources.map((resource) => ({
+      ...resource,
+      name: localizedResourceName(resource.name, locale),
+    })),
+    artifacts: snapshot.artifacts.map((artifact) => ({
+      ...artifact,
+      title: localizedArtifactTitle(artifact.title, locale),
+    })),
+    events: snapshot.events.map((event) => ({
+      ...event,
+      title: localizedEventText(event.title, locale),
+      message: event.message ? localizedEventText(event.message, locale) : event.message,
+    })),
     nodes: snapshot.nodes.map((node) => ({
       ...node,
-      label: localizedNodeLabel(node.id, locale),
+      label: localizedNodeLabel(node.id, locale, node.label),
       endpoint:
         node.endpoint === "Trust anchor"
           ? t.trustAnchor
@@ -613,7 +633,7 @@ function localizeSnapshot(snapshot: DemoSnapshot, locale: Locale): DemoSnapshot 
   };
 }
 
-function localizedNodeLabel(nodeId: string, locale: Locale): string {
+function localizedNodeLabel(nodeId: string, locale: Locale, fallback?: string): string {
   const t = uiText[locale];
   if (nodeId === "root") return t.termRoot;
   if (nodeId === "cdn") return t.termCdn;
@@ -626,7 +646,107 @@ function localizedNodeLabel(nodeId: string, locale: Locale): string {
   if (nodeId.startsWith("discovery-")) {
     return `${t.termDiscovery} ${nodeId.split("-")[1] ?? ""}`.trim();
   }
-  return nodeId;
+  if (locale === "zh") {
+    const commerceLabels: Record<string, string> = {
+      "commerce-user": "用户智能体",
+      "commerce-platform": "平台智能体",
+      "commerce-merchant-a": "商家智能体",
+      "commerce-payment": "支付智能体",
+      "commerce-logistics": "物流智能体",
+    };
+    if (commerceLabels[nodeId]) return commerceLabels[nodeId];
+  }
+  return fallback ?? nodeId;
+}
+
+function localizedResourceName(name: string, locale: Locale): string {
+  if (locale !== "zh") return name;
+  const labels: Record<string, string> = {
+    "Platform Agent": "平台智能体",
+    "Merchant Agent": "商家智能体",
+    "Payment Agent": "支付智能体",
+    "Logistics Agent": "物流智能体",
+  };
+  return labels[name] ?? name;
+}
+
+function localizedArtifactTitle(title: string, locale: Locale): string {
+  if (locale !== "zh") return title;
+  const labels: Record<string, string> = {
+    "User buying intent": "用户购买意图",
+    "Trusted discovery candidate": "可信发现候选",
+    "Verified agent session": "已验证智能体会话",
+    "Shopping brief": "购物需求简报",
+    "Merchant quote": "商家报价",
+    "Order draft": "订单草案",
+    "Payment confirmation": "支付确认",
+    "Logistics commitment": "物流承诺",
+    "Trusted commerce receipt": "可信交易凭据",
+    "Platform Agent DID Document": "平台智能体 DID 文档",
+    "Merchant Agent DID Document": "商家智能体 DID 文档",
+    "Payment Agent DID Document": "支付智能体 DID 文档",
+    "Logistics Agent DID Document": "物流智能体 DID 文档",
+  };
+  return labels[title] ?? title;
+}
+
+function localizedEventText(text: string, locale: Locale): string {
+  if (locale !== "zh") return text;
+  const labels: Record<string, string> = {
+    "Agentic Commerce: e-commerce to intelligent economy": "智能体商务：从电商经济到智能经济",
+    "Preparing local OAN topology": "正在准备本地 OAN 拓扑",
+    "Topology ready": "拓扑就绪",
+    "9 local demo nodes prepared": "9 个本地演示节点已准备",
+    "User buying intent captured": "用户购买意图已采集",
+    "Platform Agent DID Document prepared": "平台智能体 DID 文档已准备",
+    "Merchant Agent DID Document prepared": "商家智能体 DID 文档已准备",
+    "Payment Agent DID Document prepared": "支付智能体 DID 文档已准备",
+    "Logistics Agent DID Document prepared": "物流智能体 DID 文档已准备",
+    "Platform Agent DID Document captured": "平台智能体 DID 文档已采集",
+    "Merchant Agent DID Document captured": "商家智能体 DID 文档已采集",
+    "Payment Agent DID Document captured": "支付智能体 DID 文档已采集",
+    "Logistics Agent DID Document captured": "物流智能体 DID 文档已采集",
+    "Platform Agent submitted to Registrar": "平台智能体已提交到注册节点",
+    "Merchant Agent submitted to Registrar": "商家智能体已提交到注册节点",
+    "Payment Agent submitted to Registrar": "支付智能体已提交到注册节点",
+    "Logistics Agent submitted to Registrar": "物流智能体已提交到注册节点",
+    "Business service resource accepted by the governed registration path.": "业务服务资源已被受治理的注册路径接收。",
+    "Root accepted commerce agent resources": "根节点已接收商务智能体资源",
+    "Platform, merchant, payment, logistics, and after-sales capability are approved for trusted discovery.": "平台、商家、支付、物流及售后能力已通过可信发现所需的校验。",
+    "CDN published commerce resource packages": "CDN 已发布商务资源包",
+    "Root-approved resource packages are available for Discovery nodes.": "根节点批准的资源包已可供发现节点获取。",
+    "Discovery indexed commerce agents": "发现节点已索引商务智能体",
+    "User Agent can now search trusted commerce capabilities.": "用户智能体现在可以搜索可信商务能力。",
+    "Trusted discovery candidate captured": "可信发现候选已采集",
+    "User Agent selects trusted Platform Agent": "用户智能体选择可信平台智能体",
+    "Discovery returns a Root-approved candidate with DID Document hash and capability tags.": "发现节点返回经过根节点批准、带 DID 文档哈希和能力标签的候选智能体。",
+    "Verified agent session captured": "已验证智能体会话已采集",
+    "User and Platform exchange trust material": "用户与平台交换信任材料",
+    "Both sides exchange DID Documents and VCs, verify signatures, and establish a trusted session.": "双方交换 DID 文档和 VC，验证签名，并建立可信会话。",
+    "Shopping brief captured": "购物需求简报已采集",
+    "User Agent expresses purchase intent": "用户智能体表达购买意图",
+    "The verified session carries an intent token: business laptop under CNY 8,000.": "已验证会话承载购买意图令牌：8000 元以内的商务轻薄笔记本。",
+    "Merchant quote captured": "商家报价已采集",
+    "Platform Agent asks Merchant for a quote": "平台智能体向商家询价",
+    "Merchant Agent returns signed price, stock, invoice, delivery, and after-sales commitments.": "商家智能体返回已签名的价格、库存、发票、交付和售后承诺。",
+    "Order draft captured": "订单草案已采集",
+    "User Agent accepts Merchant offer": "用户智能体接受商家报价",
+    "The offer satisfies budget, delivery, invoice, and after-sales constraints.": "该报价满足预算、交付、发票和售后约束。",
+    "Payment confirmation captured": "支付确认已采集",
+    "Payment Agent authorizes payment": "支付智能体授权支付",
+    "Payment confirmation is returned after VC verification.": "VC 验证通过后返回支付确认。",
+    "Logistics commitment captured": "物流承诺已采集",
+    "Merchant Agent books logistics": "商家智能体预约物流",
+    "Logistics Agent commits 36-hour delivery with signed tracking data.": "物流智能体承诺 36 小时送达，并返回已签名的跟踪数据。",
+    "Trusted commerce receipt captured": "可信交易凭据已采集",
+    "Merchant Agent keeps after-sales context": "商家智能体维护售后上下文",
+    "Warranty, invoice, and service context stay bound to the trusted order envelope.": "质保、发票和服务上下文绑定在可信订单信封中。",
+    "Trusted business connection completed": "可信业务连接已完成",
+    "User intent was fulfilled by verified commerce agents across platform, merchant, payment, logistics, and after-sales capabilities.": "用户意图已由平台、商家、支付、物流及售后能力组成的可信智能体链路完成。",
+    "Scenario completed": "场景完成",
+    "Agentic commerce flow completed": "智能体商务流程已完成",
+  };
+  return labels[text] ?? text;
 }
 
 function DetailHeader({
@@ -736,8 +856,9 @@ function TopologyGraph({
       </g>
     );
   };
+  const viewBox = snapshot.activeScenario === "agentic-commerce" ? "-160 -90 1570 680" : "0 -90 1250 680";
   return (
-    <svg className="topology-svg" viewBox="0 -90 1250 680" role="img" aria-label={ariaLabel}>
+    <svg className={`topology-svg scenario-${snapshot.activeScenario ?? "none"}`} viewBox={viewBox} role="img" aria-label={ariaLabel}>
       <defs>
         <marker id="arrow-default" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto" markerUnits="strokeWidth">
           <path d="M 0 0 L 5 2.5 L 0 5 z" />
@@ -979,7 +1100,9 @@ function mergeTopologyNodes(baseNodes: DemoNode[], incomingNodes: DemoNode[], ru
 }
 
 function topologyBaseNodes(scenarioId?: DemoScenarioId): DemoNode[] {
-  return scenarioId === "authorization-history" ? authorizationTopologyNodes() : defaultTopologyNodes();
+  if (scenarioId === "authorization-history") return authorizationTopologyNodes();
+  if (scenarioId === "agentic-commerce") return commerceTopologyNodes();
+  return defaultTopologyNodes();
 }
 
 function defaultTopologyNodes(): DemoNode[] {
@@ -1007,6 +1130,27 @@ function defaultTopologyNodes(): DemoNode[] {
     },
     { id: "service-agent", label: "Service Agent", kind: "service-agent", endpoint: "http://127.0.0.1:9001", status: "idle" },
     { id: "user-agent", label: "User Agent", kind: "user-agent", status: "idle" },
+  ];
+}
+
+function commerceTopologyNodes(): DemoNode[] {
+  return [
+    { id: "root", label: "Root", kind: "root", endpoint: "demo://root", status: "idle" },
+    { id: "registrar-1", label: "Registrar", kind: "registrar", endpoint: "demo://registrar", status: "idle" },
+    { id: "cdn", label: "CDN", kind: "cdn", endpoint: "demo://cdn", status: "idle" },
+    {
+      id: "discovery-1",
+      label: "Discovery",
+      kind: "discovery",
+      endpoint: "demo://discovery",
+      domains: ["genesis.openagenet.local", "openagenet.local"],
+      status: "idle",
+    },
+    { id: "commerce-user", label: "User Agent", kind: "user-agent", status: "idle" },
+    { id: "commerce-platform", label: "Platform Agent", kind: "commerce-agent", endpoint: "marketplace / recommendation", status: "idle" },
+    { id: "commerce-merchant-a", label: "Merchant Agent", kind: "commerce-agent", endpoint: "merchant / inventory / after-sales", status: "idle" },
+    { id: "commerce-payment", label: "Payment Agent", kind: "commerce-agent", endpoint: "payment / settlement", status: "idle" },
+    { id: "commerce-logistics", label: "Logistics Agent", kind: "commerce-agent", endpoint: "logistics / delivery", status: "idle" },
   ];
 }
 
@@ -1076,6 +1220,8 @@ function reduceEvent(snapshot: DemoSnapshot, event: DemoEvent): DemoSnapshot {
 }
 
 function buildGraph(snapshot: DemoSnapshot): { nodes: GraphNodeView[]; edges: GraphEdgeView[]; verticalOffsetPx: number } {
+  if (snapshot.activeScenario === "agentic-commerce") return buildCommerceGraph(snapshot);
+
   const positions: Record<string, { x: number; y: number }> = {
     "onchain-governance": { x: 185, y: -66 },
     "service-agent": { x: 0, y: 430 },
@@ -1131,6 +1277,45 @@ function buildGraph(snapshot: DemoSnapshot): { nodes: GraphNodeView[]; edges: Gr
     edge("discovery-1", "user-agent", activeEdges, doneEdges, edgeLabel(snapshot, "discovery-1-user-agent"), agentEdgeOptions),
     edge("discovery-2", "user-agent", activeEdges, doneEdges, edgeLabel(snapshot, "discovery-2-user-agent"), agentEdgeOptions),
     edge("user-agent", "service-agent", activeEdges, doneEdges, edgeLabel(snapshot, "service-agent-user-agent"), { id: "service-agent-user-agent", variant: "trust", sourcePort: "left", targetPort: "right" }),
+  ];
+  return { nodes, edges, verticalOffsetPx: topologyVerticalOffsetPx(snapshot.activeScenario) };
+}
+
+function buildCommerceGraph(snapshot: DemoSnapshot): { nodes: GraphNodeView[]; edges: GraphEdgeView[]; verticalOffsetPx: number } {
+  const positions: Record<string, { x: number; y: number }> = {
+    "registrar-1": { x: -144, y: -35 },
+    root: { x: 236, y: -35 },
+    cdn: { x: 634, y: -35 },
+    "discovery-1": { x: 1014, y: -35 },
+    "commerce-platform": { x: -144, y: 507 },
+    "commerce-merchant-a": { x: 276, y: 200 },
+    "commerce-payment": { x: 674, y: 200 },
+    "commerce-logistics": { x: 620, y: 435 },
+    "commerce-user": { x: 1214, y: 507 },
+  };
+  const activeEdges = activeEdgeIds(snapshot);
+  const doneEdges = doneEdgeIds(snapshot);
+  const activeNodes = activeNodeIds(snapshot, activeEdges);
+  const resourcesByNode = resourcesGroupedByNode(snapshot);
+  const nodes = snapshot.nodes.map((node) => ({
+    id: node.id,
+    x: positions[node.id]?.x ?? 0,
+    y: positions[node.id]?.y ?? 0,
+    node,
+    active: activeNodes.has(node.id),
+    resourceText: resourcesByNode[node.id],
+  }));
+  const edges: GraphEdgeView[] = [
+    edge("commerce-platform", "registrar-1", activeEdges, doneEdges, edgeLabel(snapshot, "commerce-platform-registrar-1"), { id: "commerce-platform-registrar-1", sourcePort: "top", targetPort: "bottom" }),
+    edge("registrar-1", "root", activeEdges, doneEdges, edgeLabel(snapshot, "registrar-1-root")),
+    edge("root", "cdn", activeEdges, doneEdges, edgeLabel(snapshot, "root-cdn"), { sourcePort: "right", targetPort: "left" }),
+    edge("cdn", "discovery-1", activeEdges, doneEdges, edgeLabel(snapshot, "cdn-discovery-1")),
+    edge("discovery-1", "commerce-user", activeEdges, doneEdges, edgeLabel(snapshot, "commerce-discovery-user"), { id: "commerce-discovery-user", sourcePort: "right", targetPort: "top" }),
+    edge("commerce-user", "commerce-platform", activeEdges, doneEdges, edgeLabel(snapshot, "commerce-user-platform"), { id: "commerce-user-platform", variant: "trust", sourcePort: "left", targetPort: "right" }),
+    edge("commerce-platform", "commerce-merchant-a", activeEdges, doneEdges, edgeLabel(snapshot, "commerce-platform-merchant-a"), { id: "commerce-platform-merchant-a", variant: "trust" }),
+    edge("commerce-user", "commerce-merchant-a", activeEdges, doneEdges, edgeLabel(snapshot, "commerce-user-merchant-a"), { id: "commerce-user-merchant-a", variant: "trust", sourcePort: "left", targetPort: "right" }),
+    edge("commerce-user", "commerce-payment", activeEdges, doneEdges, edgeLabel(snapshot, "commerce-user-payment"), { id: "commerce-user-payment", variant: "trust", sourcePort: "left", targetPort: "right" }),
+    edge("commerce-merchant-a", "commerce-logistics", activeEdges, doneEdges, edgeLabel(snapshot, "commerce-merchant-a-logistics"), { id: "commerce-merchant-a-logistics", variant: "trust" }),
   ];
   return { nodes, edges, verticalOffsetPx: topologyVerticalOffsetPx(snapshot.activeScenario) };
 }
@@ -1223,6 +1408,19 @@ function activeEdgeIds(snapshot: DemoSnapshot): Set<string> {
   const active = new Set<string>();
   if (!snapshot.running) return active;
   if (!pipelineStarted(snapshot)) return active;
+  if (snapshot.activeScenario === "agentic-commerce") {
+    const add = (...ids: string[]) => ids.forEach((id) => active.add(id));
+    for (const event of snapshot.events.slice(-8)) {
+      const ownerNode = event.resource?.ownerNode;
+      if ((event.kind === "resource-created" || event.kind === "resource-registered") && ownerNode) add("commerce-platform-registrar-1");
+      if (event.kind === "resource-registered" || event.kind === "root-verified") add("registrar-1-root");
+      if (event.kind === "root-verified" || event.kind === "cdn-published") add("root-cdn");
+      if (event.kind === "cdn-published" || event.kind === "discovery-indexed") add("cdn-discovery-1", "commerce-discovery-user");
+      if (event.kind === "commerce-step" && typeof event.stats?.activeCommerceEdge === "string") add(event.stats.activeCommerceEdge);
+      if (event.kind === "trusted-connected") add("commerce-user-merchant-a");
+    }
+    return active;
+  }
   const latest = snapshot.events.slice(-8);
   const add = (...ids: string[]) => ids.forEach((id) => active.add(id));
   for (const event of latest) {
@@ -1259,6 +1457,21 @@ function doneEdgeIds(snapshot: DemoSnapshot): Set<string> {
   if (snapshot.activeScenario === "authorization-history") return done;
   if (snapshot.running || !snapshot.events.some((event) => event.kind === "scenario-completed")) return done;
   const add = (...ids: string[]) => ids.forEach((id) => done.add(id));
+  if (snapshot.activeScenario === "agentic-commerce") {
+    add(
+      "commerce-platform-registrar-1",
+      "registrar-1-root",
+      "root-cdn",
+      "cdn-discovery-1",
+      "commerce-discovery-user",
+      "commerce-user-platform",
+      "commerce-platform-merchant-a",
+      "commerce-user-merchant-a",
+      "commerce-user-payment",
+      "commerce-merchant-a-logistics",
+    );
+    return done;
+  }
   const registrarNode = currentRegistrarNode(snapshot);
   add(`service-agent-${registrarNode}`, `${registrarNode}-root`, "root-cdn", "root-discovery-1", "root-discovery-2", "cdn-discovery-1", "cdn-discovery-2");
   if (snapshot.activeScenario === "mixed-four" || snapshot.activeScenario === "mixed-1000") {
@@ -1288,6 +1501,13 @@ function activeNodeIds(snapshot: DemoSnapshot, activeEdges: Set<string>): Set<st
     "discovery-1-user-agent": ["discovery-1", "user-agent"],
     "discovery-2-user-agent": ["discovery-2", "user-agent"],
     "service-agent-user-agent": ["service-agent", "user-agent"],
+    "commerce-platform-registrar-1": ["commerce-platform", "registrar-1"],
+    "commerce-discovery-user": ["discovery-1", "commerce-user"],
+    "commerce-user-platform": ["commerce-user", "commerce-platform"],
+    "commerce-platform-merchant-a": ["commerce-platform", "commerce-merchant-a"],
+    "commerce-user-merchant-a": ["commerce-user", "commerce-merchant-a"],
+    "commerce-user-payment": ["commerce-user", "commerce-payment"],
+    "commerce-merchant-a-logistics": ["commerce-merchant-a", "commerce-logistics"],
   };
   activeEdges.forEach((id) => endpoints[id]?.forEach((nodeId) => nodes.add(nodeId)));
   const latest = snapshot.events[snapshot.events.length - 1];
@@ -1308,6 +1528,7 @@ function pipelineStarted(snapshot: DemoSnapshot): boolean {
       "discovery-indexed",
       "user-discovered",
       "trusted-connected",
+      "commerce-step",
       "pressure-progress",
       "authorization-updated",
     ].includes(event.kind),
@@ -1320,6 +1541,11 @@ function resourcesGroupedByNode(snapshot: DemoSnapshot): Record<string, string> 
     groups[nodeId] = (groups[nodeId] ?? 0) + 1;
   };
   for (const resource of snapshot.resources) {
+    if (snapshot.activeScenario === "agentic-commerce") {
+      if (resource.ownerNode) add(resource.ownerNode);
+      if (resource.stage !== "created") add(resource.registrarNode ?? "registrar-1");
+      continue;
+    }
     if (resource.stage === "created") add("service-agent");
     if (resource.stage === "registrar") add(resource.registrarNode ?? "registrar-1");
     if (resource.stage === "root") add("root");
@@ -1357,6 +1583,27 @@ function currentRegistrarNode(snapshot: DemoSnapshot): "registrar-1" | "registra
 function edgeLabel(snapshot: DemoSnapshot, edgeId: string): string | undefined {
   const stats = snapshot.stats;
   if (!snapshot.activeScenario) return undefined;
+  if (snapshot.activeScenario === "agentic-commerce") {
+    const zh = snapshot.stats.__locale === "zh";
+    const labels: Record<string, string> = zh
+      ? {
+          "commerce-discovery-user": "候选",
+          "commerce-user-platform": "验证",
+          "commerce-platform-merchant-a": "询价",
+          "commerce-user-merchant-a": "下单",
+          "commerce-user-payment": "支付",
+          "commerce-merchant-a-logistics": "物流",
+        }
+      : {
+          "commerce-discovery-user": "candidate",
+          "commerce-user-platform": "verify",
+          "commerce-platform-merchant-a": "quote",
+          "commerce-user-merchant-a": "order",
+          "commerce-user-payment": "pay",
+          "commerce-merchant-a-logistics": "ship",
+        };
+    if (labels[edgeId]) return labels[edgeId];
+  }
   if (edgeId.includes("registrar")) {
     const registrarCounts = stats.registrarAccepted as Record<string, unknown> | undefined;
     if (registrarCounts && edgeId.includes("registrar-1")) return String(Number(registrarCounts["registrar-1"] ?? 0));

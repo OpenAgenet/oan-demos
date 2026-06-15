@@ -118,6 +118,7 @@ export class DemoEventBus {
       at: new Date().toISOString(),
       ...input,
     };
+    if (event.stats) this.setStats(event.stats);
     this.snapshot.events = [...this.snapshot.events, event].slice(-500);
     for (const listener of this.listeners) listener(event);
     return event;

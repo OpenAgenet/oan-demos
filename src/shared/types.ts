@@ -3,7 +3,7 @@
 // Initial author: JINLIANG XU
 // Email: jlxufly@gmail.com
 
-export type DemoScenarioId = "service-agent" | "mixed-four" | "mixed-1000" | "authorization-history";
+export type DemoScenarioId = "service-agent" | "mixed-four" | "mixed-1000" | "authorization-history" | "agentic-commerce";
 
 export type DemoEventKind =
   | "topology"
@@ -18,6 +18,7 @@ export type DemoEventKind =
   | "discovery-indexed"
   | "user-discovered"
   | "trusted-connected"
+  | "commerce-step"
   | "pressure-progress"
   | "authorization-updated"
   | "scenario-completed"
@@ -27,7 +28,17 @@ export type DemoEventKind =
 export interface DemoNode {
   id: string;
   label: string;
-  kind: "root" | "registrar" | "discovery" | "cdn" | "publisher" | "nats" | "service-agent" | "user-agent" | "governance";
+  kind:
+    | "root"
+    | "registrar"
+    | "discovery"
+    | "cdn"
+    | "publisher"
+    | "nats"
+    | "service-agent"
+    | "user-agent"
+    | "governance"
+    | "commerce-agent";
   did?: string;
   endpoint?: string;
   status?: "idle" | "starting" | "running" | "done" | "error";
@@ -60,7 +71,7 @@ export interface DemoArtifact {
   title: string;
   owner: string;
   resourceDid?: string;
-  kind: "did-document" | "vc" | "private-key" | "registration" | "root-proof" | "package" | "discovery-response" | "summary";
+  kind: "did-document" | "vc" | "private-key" | "registration" | "root-proof" | "package" | "discovery-response" | "summary" | "commerce";
   value: unknown;
   sensitive?: boolean;
 }

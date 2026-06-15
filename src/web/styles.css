@@ -523,6 +523,14 @@ button, select {
   border-left-color: #d59026;
 }
 
+.event-commerce-step {
+  border-left-color: #2f6fbb;
+}
+
+.event-commerce-step {
+  border-left-color: #2f6fbb;
+}
+
 .inspector-drawer {
   border: 1px solid #dbe2ea;
   border-radius: 7px;
@@ -933,6 +941,14 @@ tbody tr.active-row {
 
 .graph-user-agent.status-running, .graph-user-agent.status-done, .graph-user-agent.status-active {
   background: #e6fbff;
+}
+
+.graph-commerce-agent.status-running, .graph-commerce-agent.status-done, .graph-commerce-agent.status-active {
+  background: #f2f6ff;
+}
+
+.graph-commerce-agent.status-running, .graph-commerce-agent.status-done, .graph-commerce-agent.status-active {
+  background: #f2f6ff;
 }
 
 .graph-node.auth-unauthorized {

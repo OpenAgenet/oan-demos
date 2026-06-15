@@ -6,7 +6,7 @@
 import fs from "node:fs";
 import crypto from "node:crypto";
 import path from "node:path";
-import type { DemoNode, DemoResource, DemoScenarioId } from "../shared/types.js";
+import type { DemoArtifact, DemoNode, DemoResource, DemoScenarioId } from "../shared/types.js";
 import type { DemoEventBus } from "./event-bus.js";
 import {
   adminToken,
@@ -57,7 +57,7 @@ import {
   waitForHttpHealth,
 } from "../../../oan-examples/scripts/bench/example-flows.js";
 
-const scenarioIds = new Set(["service-agent", "mixed-four", "mixed-1000", "authorization-history"]);
+const scenarioIds = new Set(["service-agent", "mixed-four", "mixed-1000", "authorization-history", "agentic-commerce"]);
 const demoDomains = ["genesis.openagenet.local", "openagenet.local"];
 
 interface DemoRuntime {
@@ -129,6 +129,23 @@ export async function runScenario(rawScenarioId: string, bus: DemoEventBus): Pro
     }
     return;
   }
+  if (scenarioId === "agentic-commerce") {
+    try {
+      await runAgenticCommerceScenario(scenarioId, bus);
+      bus.emit({ kind: "scenario-completed", scenarioId, title: "Scenario completed", message: "Agentic commerce flow completed" });
+    } catch (error) {
+      bus.emit({
+        kind: "scenario-failed",
+        scenarioId,
+        title: "Scenario failed",
+        message: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    } finally {
+      bus.finish();
+    }
+    return;
+  }
   bus.setTopology(runtimeTopologyNodes(scenarioId), scenarioId);
   let context: DemoContext | undefined;
   try {
@@ -160,6 +177,7 @@ function scenarioTitle(scenarioId: DemoScenarioId): string {
   if (scenarioId === "service-agent") return "One Agent registration and trusted connection";
   if (scenarioId === "mixed-four") return "Four OAN resource types";
   if (scenarioId === "authorization-history") return "Chain authorization history replay";
+  if (scenarioId === "agentic-commerce") return "Agentic Commerce: e-commerce to intelligent economy";
   return "1000 mixed resources pipeline";
 }
 
@@ -172,6 +190,315 @@ function runtimeTopologyNodes(_scenarioId: DemoScenarioId): DemoNode[] {
     node("service-agent", "Service Agent", "service-agent", undefined, runtime.serviceAgentPort),
     node("user-agent", "User Agent", "user-agent", undefined, undefined),
   ];
+}
+
+async function runAgenticCommerceScenario(scenarioId: DemoScenarioId, bus: DemoEventBus): Promise<void> {
+  const agents = commerceAgents();
+  bus.setTopology(commerceTopologyNodes(), scenarioId);
+  bus.setStats({ total: agents.length, current: 0, accepted: 0 });
+  bus.addArtifact({
+    id: "commerce:intent",
+    title: "User buying intent",
+    owner: "commerce-user",
+    kind: "commerce",
+    value: {
+      intentId: "intent-business-laptop-001",
+      userGoal: "Buy a lightweight laptop suitable for business travel under CNY 8,000.",
+      constraints: ["budget<=8000", "weight<=1.4kg", "delivery<=48h", "invoice_required=true"],
+      status: "created",
+    },
+  }, scenarioId);
+  await sleep(800);
+
+  for (let index = 0; index < agents.length; index++) {
+    const agent = agents[index];
+    const resource = commerceResource(agent);
+    bus.upsertResource(resource, "resource-created", scenarioId, `${agent.label} DID Document prepared`, agent.description);
+    bus.addArtifact(commerceDidArtifact(agent), scenarioId);
+    await sleep(350);
+    bus.upsertResource({ ...resource, stage: "registrar", registrarNode: "registrar-1" }, "resource-registered", scenarioId, `${agent.label} submitted to Registrar`, "Business service resource accepted by the governed registration path.");
+    bus.setStats({ total: agents.length, current: index + 1, accepted: index + 1 });
+    await sleep(300);
+  }
+
+  bus.emit({
+    kind: "root-verified",
+    scenarioId,
+    title: "Root accepted commerce agent resources",
+    message: "Platform, merchant, payment, logistics, and after-sales capability are approved for trusted discovery.",
+    stats: { total: agents.length, current: agents.length, accepted: agents.length, rootLatest: agents.length },
+  });
+  await sleep(2700);
+  bus.emit({
+    kind: "cdn-published",
+    scenarioId,
+    title: "CDN published commerce resource packages",
+    message: "Root-approved resource packages are available for Discovery nodes.",
+    stats: { cdnPublished: agents.length },
+  });
+  await sleep(900);
+  bus.emit({
+    kind: "discovery-indexed",
+    scenarioId,
+    title: "Discovery indexed commerce agents",
+    message: "User Agent can now search trusted commerce capabilities.",
+    stats: { discoveryA: agents.length, discoveryB: agents.length },
+  });
+  await sleep(900);
+
+  const steps = [
+    {
+      title: "User Agent selects trusted Platform Agent",
+      message: "Discovery returns a Root-approved candidate with DID Document hash and capability tags.",
+      active: "commerce-discovery-user",
+      artifact: {
+        id: "commerce:discovery-candidate",
+        title: "Trusted discovery candidate",
+        owner: "commerce-user",
+        kind: "commerce" as const,
+        value: {
+          query: {
+            capability: "trusted_commerce_orchestration",
+            constraints: ["authorized_domain=openagenet.local", "vc_required=true", "after_sales_required=true"],
+          },
+          selectedCandidate: {
+            agent: "commerce-platform-agent",
+            did: "did:oan:AGDM:commercePlatformAgent00000001",
+            source: "Discovery",
+            trustPath: ["Registrar", "Root", "CDN", "Discovery"],
+            capabilityTags: ["commerce", "marketplace", "recommendation"],
+          },
+        },
+      },
+    },
+    {
+      title: "User and Platform exchange trust material",
+      message: "Both sides exchange DID Documents and VCs, verify signatures, and establish a trusted session.",
+      active: "commerce-user-platform",
+      artifact: {
+        id: "commerce:trust-session",
+        title: "Verified agent session",
+        owner: "commerce-user",
+        kind: "commerce" as const,
+        value: {
+          sessionId: "commerce-session-001",
+          initiator: "commerce-user-agent",
+          responder: "commerce-platform-agent",
+          checks: [
+            "platform_did_document_hash_matches_discovery_candidate",
+            "platform_vc_signature_valid",
+            "user_vc_signature_valid",
+            "challenge_response_completed",
+            "session_policy_bound_to_purchase_intent",
+          ],
+          status: "verified",
+        },
+      },
+    },
+    {
+      title: "User Agent expresses purchase intent",
+      message: "The verified session carries an intent token: business laptop under CNY 8,000.",
+      active: "commerce-user-platform",
+      artifact: {
+        id: "commerce:brief",
+        title: "Shopping brief",
+        owner: "commerce-user",
+        kind: "commerce" as const,
+        value: {
+          requestedBy: "commerce-user-agent",
+          sentTo: "commerce-platform-agent",
+          criteria: ["business travel", "lightweight", "budget controlled", "trusted seller"],
+        },
+      },
+    },
+    {
+      title: "Platform Agent asks Merchant for a quote",
+      message: "Merchant Agent returns signed price, stock, invoice, delivery, and after-sales commitments.",
+      active: "commerce-platform-merchant-a",
+      artifact: {
+        id: "commerce:quotes",
+        title: "Merchant quote",
+        owner: "commerce-platform",
+        kind: "commerce" as const,
+        value: {
+          quotes: [
+            {
+              merchant: "merchant-a",
+              item: "ThinkBook Air 14",
+              priceCny: 7699,
+              stock: 12,
+              deliveryHours: 36,
+              afterSales: ["invoice", "warranty", "return_or_exchange", "service_context"],
+            },
+          ],
+          verification: "DID and VC verified before quote acceptance",
+        },
+      },
+    },
+    {
+      title: "User Agent accepts Merchant offer",
+      message: "The offer satisfies budget, delivery, invoice, and after-sales constraints.",
+      active: "commerce-user-merchant-a",
+      artifact: {
+        id: "commerce:order",
+        title: "Order draft",
+        owner: "commerce-user",
+        kind: "commerce" as const,
+        value: {
+          orderId: "oan-commerce-demo-order-001",
+          merchant: "merchant-a",
+          item: "ThinkBook Air 14",
+          priceCny: 7699,
+          status: "awaiting_payment",
+        },
+      },
+    },
+    {
+      title: "Payment Agent authorizes payment",
+      message: "Payment confirmation is returned after VC verification.",
+      active: "commerce-user-payment",
+      artifact: {
+        id: "commerce:payment",
+        title: "Payment confirmation",
+        owner: "commerce-payment",
+        kind: "commerce" as const,
+        value: {
+          paymentId: "pay-demo-20260615-001",
+          amountCny: 7699,
+          payer: "commerce-user-agent",
+          payee: "merchant-a",
+          status: "authorized",
+        },
+      },
+    },
+    {
+      title: "Merchant Agent books logistics",
+      message: "Logistics Agent commits 36-hour delivery with signed tracking data.",
+      active: "commerce-merchant-a-logistics",
+      artifact: {
+        id: "commerce:shipping",
+        title: "Logistics commitment",
+        owner: "commerce-logistics",
+        kind: "commerce" as const,
+        value: {
+          shipmentId: "ship-demo-001",
+          carrier: "OAN Express Agent",
+          deliveryHours: 36,
+          status: "scheduled",
+        },
+      },
+    },
+    {
+      title: "Merchant Agent keeps after-sales context",
+      message: "Warranty, invoice, and service context stay bound to the trusted order envelope.",
+      active: "commerce-user-merchant-a",
+      artifact: {
+        id: "commerce:receipt",
+        title: "Trusted commerce receipt",
+        owner: "commerce-merchant-a",
+        kind: "commerce" as const,
+        value: {
+          receiptId: "receipt-demo-001",
+          orderId: "oan-commerce-demo-order-001",
+          verifiedAgents: agents.map((agent) => agent.did),
+          businessState: "paid_and_scheduled",
+        },
+      },
+    },
+  ];
+
+  for (const [index, step] of steps.entries()) {
+    bus.addArtifact(step.artifact, scenarioId, `${step.artifact.title} captured`);
+    bus.emit({
+      kind: "commerce-step",
+      scenarioId,
+      title: step.title,
+      message: step.message,
+      nodeId: step.active,
+      stats: { commerceStep: index + 1, commerceTotal: steps.length, activeCommerceEdge: step.active },
+    });
+    await sleep(3300);
+  }
+  bus.emit({
+    kind: "trusted-connected",
+    scenarioId,
+    title: "Trusted business connection completed",
+    message: "User intent was fulfilled by verified commerce agents across platform, merchant, payment, logistics, and after-sales capabilities.",
+    stats: { commerceStep: steps.length, commerceTotal: steps.length, activeCommerceEdge: "commerce-user-merchant-a" },
+  });
+}
+
+interface CommerceAgentSpec {
+  id: string;
+  label: string;
+  did: string;
+  type: ResourceType;
+  tags: string[];
+  description: string;
+}
+
+function commerceAgents(): CommerceAgentSpec[] {
+  return [
+    { id: "commerce-platform", label: "Platform Agent", did: "did:oan:AGDM:commercePlatformAgent00000001", type: "agent_service", tags: ["commerce", "marketplace", "recommendation"], description: "Aggregates offers and orchestrates commerce workflows." },
+    { id: "commerce-merchant-a", label: "Merchant Agent", did: "did:oan:AGDM:commerceMerchantAgentA000001", type: "agent_service", tags: ["commerce", "merchant", "inventory", "after-sales"], description: "Provides product quote, stock, invoice, fulfillment, warranty, and after-sales service context." },
+    { id: "commerce-payment", label: "Payment Agent", did: "did:oan:AGDM:commercePaymentAgent00000001", type: "agent_service", tags: ["commerce", "payment", "settlement"], description: "Authorizes payment after identity and order verification." },
+    { id: "commerce-logistics", label: "Logistics Agent", did: "did:oan:AGDM:commerceLogisticsAgent000001", type: "agent_service", tags: ["commerce", "logistics", "delivery"], description: "Commits shipment and tracking data for the selected order." },
+  ];
+}
+
+function commerceTopologyNodes(): DemoNode[] {
+  return [
+    node("root", "Root", "root", undefined, runtime.rootPort),
+    node("registrar-1", "Registrar", "registrar", undefined, runtime.registrarPorts[0]),
+    node("cdn", "CDN", "cdn", undefined, runtime.cdnPort),
+    node("discovery-1", "Discovery", "discovery", undefined, runtime.discoveryPorts[0], demoDomains),
+    { id: "commerce-user", label: "User Agent", kind: "user-agent", status: "idle" },
+    ...commerceAgents().map((agent) => ({
+      id: agent.id,
+      label: agent.label,
+      kind: "commerce-agent" as const,
+      did: agent.did,
+      endpoint: agent.tags.join(" / "),
+      status: "idle" as const,
+    })),
+  ];
+}
+
+function commerceResource(agent: CommerceAgentSpec): DemoResource {
+  return {
+    did: agent.did,
+    type: agent.type,
+    name: agent.label,
+    tags: agent.tags,
+    ownerNode: agent.id,
+    registrarNode: "registrar-1",
+    stage: "created",
+  };
+}
+
+function commerceDidArtifact(agent: CommerceAgentSpec): DemoArtifact {
+  return {
+    id: `${agent.did}:did`,
+    title: `${agent.label} DID Document`,
+    owner: agent.id,
+    resourceDid: agent.did,
+    kind: "did-document",
+    value: {
+      "@context": ["https://www.w3.org/ns/did/v1", "https://w3id.org/oan/v1"],
+      id: agent.did,
+      service: [{ id: `${agent.did}#commerce-api`, type: "AgentService", serviceEndpoint: `demo://${agent.id}` }],
+      oanMetadata: {
+        resourceType: agent.type,
+        identityType: "commerce-agent",
+        capabilityTags: agent.tags,
+        resourceDescription: {
+          name: agent.label,
+          description: agent.description,
+          useCaseExamples: ["Trusted discovery", "VC verification", "Agentic commerce workflow"],
+        },
+      },
+    },
+  };
 }
 
 interface AuthorizationReplayEvent {

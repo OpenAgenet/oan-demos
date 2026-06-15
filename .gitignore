@@ -2,3 +2,5 @@ node_modules/
 dist/
 .demo-logs/
 .run-logs/
+.demo-server.log
+.demo-server.err
