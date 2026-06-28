@@ -1,0 +1,19 @@
+{
+  "warning": "Generated for local OAN examples. Do not use in production.",
+  "did": "did:oan:AGDM:3Sxc7CHcNx1xW4TajVJqS2KDRJDBbTcG",
+  "keyId": "did:oan:AGDM:3Sxc7CHcNx1xW4TajVJqS2KDRJDBbTcG#key-1",
+  "algorithm": "Ed25519",
+  "cryptoSuite": "ed25519-sha256",
+  "publicKeyMultibase": "zfhtD9t5qNPsbGYqgndeu1niwe74wkQBbVfnxxkypx9r",
+  "publicKeyJwk": {
+    "crv": "Ed25519",
+    "x": "CepMFivgNoqd4GAkF2X6nV9jbjS2GiDbxAO6_5vJ4bU",
+    "kty": "OKP"
+  },
+  "privateKeyJwk": {
+    "crv": "Ed25519",
+    "d": "SIQugUPD5GwVa1UqMAnTMYTMh2neuRA2YKeOsQ43sso",
+    "x": "CepMFivgNoqd4GAkF2X6nV9jbjS2GiDbxAO6_5vJ4bU",
+    "kty": "OKP"
+  }
+}

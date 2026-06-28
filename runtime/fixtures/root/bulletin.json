@@ -1,0 +1,119 @@
+{
+  "version": "0.1.0",
+  "rootDid": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+  "createdAt": "2026-05-20T00:00:00Z",
+  "events": [
+    {
+      "sequence": 1,
+      "previousHash": null,
+      "eventType": "ROOT_INITIALIZED",
+      "subjectDid": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+      "actorDid": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+      "payload": {
+        "didDocumentHash": "63b0c49836d0cf0423366e051c8e2b9357083e134a6d8aee4adc18b3b66d881c"
+      },
+      "createdAt": "2026-05-20T00:00:00Z",
+      "eventHash": "d600696c112d6e7e29c3aa54084c86275381d3545b36669a855258d704fc3a0c",
+      "signature": "qv8dMZvhFRBFFOD1CST29Y2LqQPlZjVhziUPU7SVgj2XZ9YwEs91MZj7TYqY386SDDWJHmh-t7mQSHKHIf_xCA",
+      "proof": {
+        "type": "Ed25519Signature2020",
+        "creator": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+        "created": "2026-05-20T00:00:00Z",
+        "proofPurpose": "assertionMethod",
+        "proofValue": "qv8dMZvhFRBFFOD1CST29Y2LqQPlZjVhziUPU7SVgj2XZ9YwEs91MZj7TYqY386SDDWJHmh-t7mQSHKHIf_xCA",
+        "cryptoSuite": "Ed25519Sha256",
+        "hashAlgorithm": "SHA-256",
+        "verificationMethod": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm#key-1"
+      },
+      "cryptoSuite": "Ed25519Sha256",
+      "hashAlgorithm": "SHA-256"
+    },
+    {
+      "sequence": 2,
+      "eventType": "CDN_SERVICE_INFO_UPDATED",
+      "subjectDid": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+      "actorDid": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+      "payload": {
+        "serviceId": "oan-local-cdn",
+        "providerType": "local",
+        "baseUrl": "http://localhost:8003",
+        "resourceIndexUrl": "http://localhost:8003/cdn/resources/index",
+        "resourcePublishUrl": "http://localhost:8003/cdn/resources",
+        "resourceUrlTemplate": "http://localhost:8003/cdn/resources/{did}",
+        "status": "active",
+        "validFrom": "2026-05-20T00:00:00Z",
+        "validUntil": null
+      },
+      "createdAt": "2026-05-20T00:00:00Z",
+      "previousHash": "d600696c112d6e7e29c3aa54084c86275381d3545b36669a855258d704fc3a0c",
+      "eventHash": "1934ab9c548541cd6181b45c2e8f884fecd4f26f947711b67b84c601c7db9a84",
+      "signature": "tZGklhrpDx3sVDCgpFKMLDYMEhqg82psCvhxekJ_Ug_NdhEiY5rfP4_PKYT6DFc3V4m13SRYAw74xwLvM09_BA",
+      "proof": {
+        "type": "Ed25519Signature2020",
+        "creator": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+        "created": "2026-05-20T00:00:00Z",
+        "proofPurpose": "assertionMethod",
+        "proofValue": "tZGklhrpDx3sVDCgpFKMLDYMEhqg82psCvhxekJ_Ug_NdhEiY5rfP4_PKYT6DFc3V4m13SRYAw74xwLvM09_BA",
+        "cryptoSuite": "Ed25519Sha256",
+        "hashAlgorithm": "SHA-256",
+        "verificationMethod": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm#key-1"
+      },
+      "cryptoSuite": "Ed25519Sha256",
+      "hashAlgorithm": "SHA-256"
+    },
+    {
+      "sequence": 3,
+      "eventType": "REGISTRAR_AUTHORIZED",
+      "subjectDid": "did:oan:AGRG:ef5GRqjxJtj9AhpGwpKnwV9PF3PzbUkHkydAM5bRUmGdVk",
+      "actorDid": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+      "payload": {
+        "didDocumentHash": "38ff5c5fc50a9e73ed63d98fa1724afaf66eeaea382c6b7e241bd970ef53c456"
+      },
+      "createdAt": "2026-05-20T00:00:00Z",
+      "previousHash": "1934ab9c548541cd6181b45c2e8f884fecd4f26f947711b67b84c601c7db9a84",
+      "eventHash": "fb55bf6603a99bcabab0ba98fa27e4560f59ef47b697b98bd61929306d44deb1",
+      "signature": "H7Jr-RV--Zcyr1CgvSF1BFhUQgerxWy0Ck95NNeU_-7wAffRxoJQ8udW5rR1Cta8PEiRyWqPwHQzfL6ug1uZCA",
+      "proof": {
+        "type": "Ed25519Signature2020",
+        "creator": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+        "created": "2026-05-20T00:00:00Z",
+        "proofPurpose": "assertionMethod",
+        "proofValue": "H7Jr-RV--Zcyr1CgvSF1BFhUQgerxWy0Ck95NNeU_-7wAffRxoJQ8udW5rR1Cta8PEiRyWqPwHQzfL6ug1uZCA",
+        "cryptoSuite": "Ed25519Sha256",
+        "hashAlgorithm": "SHA-256",
+        "verificationMethod": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm#key-1"
+      },
+      "cryptoSuite": "Ed25519Sha256",
+      "hashAlgorithm": "SHA-256"
+    },
+    {
+      "sequence": 4,
+      "eventType": "DISCOVERY_NODE_AUTHORIZED",
+      "subjectDid": "did:oan:AGDS:ef3hCVLAMjyvqjWFHzaFsB8hSCXJEA9ygXL1ewaEHuHbuu",
+      "actorDid": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+      "payload": {
+        "didDocumentHash": "4a44397c146057cab459d29562957bee7f13a3e5fa0369cc77a38a153bab05c1",
+        "authorizedDomains": [
+          "*"
+        ],
+        "tagTreeVersion": 1
+      },
+      "createdAt": "2026-05-20T00:00:00Z",
+      "previousHash": "fb55bf6603a99bcabab0ba98fa27e4560f59ef47b697b98bd61929306d44deb1",
+      "eventHash": "5ce3c35ac3333411bb8ba7776b78ac9322870952a06ccaab32096f94bbca06fc",
+      "signature": "VDBIMJCYOGTHMRGI3_eIoU5dQqtk7yv5E1GlqTJWYL4jQWmJ7pAJ8QgDj8vCsHX1nvdUoY8MB4XvqZMsSN3TCQ",
+      "proof": {
+        "type": "Ed25519Signature2020",
+        "creator": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+        "created": "2026-05-20T00:00:00Z",
+        "proofPurpose": "assertionMethod",
+        "proofValue": "VDBIMJCYOGTHMRGI3_eIoU5dQqtk7yv5E1GlqTJWYL4jQWmJ7pAJ8QgDj8vCsHX1nvdUoY8MB4XvqZMsSN3TCQ",
+        "cryptoSuite": "Ed25519Sha256",
+        "hashAlgorithm": "SHA-256",
+        "verificationMethod": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm#key-1"
+      },
+      "cryptoSuite": "Ed25519Sha256",
+      "hashAlgorithm": "SHA-256"
+    }
+  ]
+}

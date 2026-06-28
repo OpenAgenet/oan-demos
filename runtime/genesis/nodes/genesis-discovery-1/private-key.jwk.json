@@ -1,0 +1,7 @@
+{
+  "crv": "Ed25519",
+  "d": "0ZgMO6o8v2nVKPO95J6K8ffDmH0tUf8KJbMmJKW4SJM",
+  "x": "ogRochGPaQWpSC56GHx8XXaX6INMbWkQ1IlmlCN5LQA",
+  "kty": "OKP",
+  "kid": "did:oan:INDS:WvG7335ct9cAwtCmmB9FWBeTJzwj9dbM#key-1"
+}

@@ -7,10 +7,10 @@
 
 # OAN Demos
 
-Local visual demos for OpenAgenet / OAN. This repository is intentionally
-independent from the implementation repositories. It reuses sibling repository
-binaries, genesis fixtures, and benchmark helpers without changing OAN service
-code.
+Local visual demos for OpenAgenet / OAN. The repository is self-contained for
+normal demonstration use: it includes the demo UI, demo server, OAN node
+executables, NATS, genesis identities, fixtures, and the Python agent code under
+`runtime/`.
 
 For a full setup guide, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
@@ -27,19 +27,15 @@ Open `http://127.0.0.1:5177`.
 The demo API listens on `http://127.0.0.1:8787` and the browser connects by SSE
 to `/events`.
 
-## Required Local Layout
+## Local Requirements
 
-The demo expects this repository to sit beside the other OAN repositories under
-one workspace root:
+- Node.js and npm.
+- Python and `uv`, required by the Service Agent scenario.
+- PostgreSQL server listening on `127.0.0.1:5432`.
+- PostgreSQL CLI tools, especially `psql.exe`.
 
-```text
-D:\Works\VscodeProject\OAN
-```
-
-It uses the fixed local runtimes selected for this machine:
-
-- NATS: `D:\ProgramFiles\nats\nats-server\nats-server.exe`
-- PostgreSQL tools: `D:\ProgramFiles\postgresql\bin`
+The OAN service executables and NATS server are bundled in this repository for
+Windows x64 under `runtime/bin/win32-x64/`.
 
 ## Topology
 
@@ -53,8 +49,8 @@ Every scenario starts a real local OAN topology:
 - 1 NATS JetStream on port `4522`
 - optional Python Service Agent on port `9001`
 
-Node identities are copied from genesis fixtures. Discovery authorized domains
-remain `genesis.openagenet.local` and `openagenet.local`.
+Node identities are copied from bundled genesis fixtures. Discovery authorized
+domains remain `genesis.openagenet.local` and `openagenet.local`.
 
 ## Scenarios
 
@@ -84,6 +80,14 @@ Invoke-RestMethod -Uri 'http://127.0.0.1:8787/api/scenarios/run' `
 Invoke-RestMethod -Uri 'http://127.0.0.1:8787/api/snapshot'
 ```
 
-The scenarios write transient OAN working data under the benchmark work
-directory used by `oan-examples`; generated frontend assets and logs stay local
-to this repo and are ignored by git.
+## Runtime Refresh
+
+When upstream OAN nodes or fixtures are intentionally upgraded, refresh the
+bundled runtime from a sibling OAN workspace:
+
+```powershell
+npm run sync:runtime
+```
+
+Set `OAN_DEMOS_USE_BUNDLED_RUNTIME=false` only for development sessions where
+the demo should build and run services from sibling implementation repositories.

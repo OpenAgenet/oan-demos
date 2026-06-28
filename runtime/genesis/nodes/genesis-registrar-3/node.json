@@ -1,0 +1,50 @@
+{
+  "id": "genesis-registrar-3",
+  "role": "registrar",
+  "subjectType": 1,
+  "did": "did:oan:INRG:3Bcv7D3G83ccQDRuJ5ucxeXLLTZPwnt4",
+  "oldDid": "did:oan:REG:genesis-registrar-3",
+  "targetAddress": "0x0b2bac7f473b73c37c9ba736e7545df87504028ee0981cd2fed7bfc5130a3c5d",
+  "endpoint": "https://registrar-3.genesis.openagenet.local",
+  "authorizedDomains": [],
+  "status": "active",
+  "network": "sui-mainnet",
+  "packageId": "0x1b602d575ddf1ced075f9d2986bfe53cd7d4e59967ec26a0d949009c7b2c9d6c",
+  "bulletinObjectId": "0xb900fb0dc1ebd58fbc4d0c697d644c861578ed948e26638836e338de0d1a3b46",
+  "rootAuthorityDid": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+  "proposalId": 26,
+  "eventSequence": 21,
+  "chainGovernanceStatus": "active",
+  "description": "Genesis Registrar node 3 for local integration and load tests.",
+  "keyFiles": {
+    "privateKeyJwk": "private-key.jwk.json",
+    "publicKeyJwk": "public-key.jwk.json"
+  },
+  "governanceNoticeFile": "chain-governance-notice.json",
+  "rootAuthorizationCredentialFile": "root-authorization-vc.json",
+  "didDocumentFile": "did-document.json",
+  "createDigest": "DjhJ3Xyt98SFoUqc9TRkCciU73d3im3CtacSsUezLvTM",
+  "voteDigests": [
+    "EDvoELHTUogjCQ2JcCkAVxxRgcUgPGoS3eQSSc6GgxFK",
+    "xb7PyeRaMVasRKMbY6EQHP7V28t61y9P5suYwGDqGbP",
+    "FCTEnU2b5eBKmwGZoH86cDzcEDn7E6a8jhyTEg34ZQmN"
+  ],
+  "refreshDigest": "5b7KH1Q6nKtp9TFPAm4EW5PXd5rKHZZzu6Qz5dFjJNUa",
+  "latestAction": "recover-after-did-document-refresh",
+  "latestGovernanceRefresh": {
+    "suspendProposalId": 25,
+    "suspendEventSequence": 20,
+    "suspendDigest": "4SfKGPBH8gWxmvPJ28yvkTFfd6WkK1XCrTsckAqgbFBm",
+    "recoverProposalId": 26,
+    "recoverEventSequence": 21,
+    "recoverDigest": "5b7KH1Q6nKtp9TFPAm4EW5PXd5rKHZZzu6Qz5dFjJNUa",
+    "didDocumentStableHash": "sha256:bf2a0a1d9498ea18031bae097c493da8e52114d0e6f925c0e8e47f09258530cf",
+    "note": "Recover event restores active state after refreshing DID Document metadata hash. Stable hash excludes oanMetadata.chainGovernance to avoid circular hash changes."
+  },
+  "bootstrapGovernance": {
+    "proposalId": 8,
+    "eventSequence": 8,
+    "createDigest": "DjhJ3Xyt98SFoUqc9TRkCciU73d3im3CtacSsUezLvTM",
+    "refreshDigest": "54ugZmXtsPYDojKubPe23dKg2uQUvgBUhD7oDJEjWYDj"
+  }
+}

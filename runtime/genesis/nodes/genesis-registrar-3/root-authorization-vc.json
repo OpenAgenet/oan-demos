@@ -1,0 +1,54 @@
+{
+  "@context": [
+    "https://www.w3.org/2018/credentials/v1",
+    "https://openagenet.org/credentials/v1"
+  ],
+  "id": "urn:oan:genesis:root-authorization:genesis-registrar-3",
+  "type": [
+    "VerifiableCredential",
+    "OANInfrastructureAuthorizationCredential"
+  ],
+  "issuer": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+  "issuanceDate": "2026-06-04T00:00:00Z",
+  "credentialSubject": {
+    "id": "did:oan:INRG:3Bcv7D3G83ccQDRuJ5ucxeXLLTZPwnt4",
+    "role": "registrar",
+    "subjectType": 1,
+    "endpoint": "https://registrar-3.genesis.openagenet.local",
+    "authorizedDomains": [],
+    "didDocumentFile": "did-document.json"
+  },
+  "credentialStatus": {
+    "type": "OANChainGovernanceBackedAuthorizationStatus2026",
+    "status": "active",
+    "chainGovernanceNoticeFile": "chain-governance-notice.json",
+    "network": "sui-mainnet",
+    "packageId": "0x1b602d575ddf1ced075f9d2986bfe53cd7d4e59967ec26a0d949009c7b2c9d6c",
+    "bulletinObjectId": "0xb900fb0dc1ebd58fbc4d0c697d644c861578ed948e26638836e338de0d1a3b46",
+    "expectedGovernanceState": "active",
+    "proposalId": 26,
+    "eventSequence": 21,
+    "createDigest": "DjhJ3Xyt98SFoUqc9TRkCciU73d3im3CtacSsUezLvTM",
+    "refreshDigest": "5b7KH1Q6nKtp9TFPAm4EW5PXd5rKHZZzu6Qz5dFjJNUa",
+    "latestAction": "recover-after-did-document-refresh",
+    "didDocumentStableHash": "sha256:bf2a0a1d9498ea18031bae097c493da8e52114d0e6f925c0e8e47f09258530cf",
+    "suspendProposalId": 25,
+    "suspendEventSequence": 20,
+    "suspendDigest": "4SfKGPBH8gWxmvPJ28yvkTFfd6WkK1XCrTsckAqgbFBm",
+    "bootstrapGovernance": {
+      "proposalId": 8,
+      "eventSequence": 8,
+      "createDigest": "DjhJ3Xyt98SFoUqc9TRkCciU73d3im3CtacSsUezLvTM",
+      "refreshDigest": "54ugZmXtsPYDojKubPe23dKg2uQUvgBUhD7oDJEjWYDj"
+    }
+  },
+  "proof": {
+    "type": "OANEd25519Signature2026",
+    "cryptosuite": "ed25519-jcs-2026",
+    "proofPurpose": "assertionMethod",
+    "verificationMethod": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm#key-1",
+    "created": "2026-06-04T00:00:00Z",
+    "canonicalizationAlgorithm": "JCS-RFC8785-compatible-key-sorted-json",
+    "proofValue": "_un2kzHXKO_H5FLabGgjL9nmfmasgC0y59ef_1gTzmg_zlOYmxX9jyTEr9NBH5GoneyFbkIohVTCt0dhv4WHBA"
+  }
+}

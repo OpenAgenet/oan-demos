@@ -1,0 +1,53 @@
+{
+  "id": "genesis-discovery-1",
+  "role": "discovery",
+  "subjectType": 2,
+  "did": "did:oan:INDS:WvG7335ct9cAwtCmmB9FWBeTJzwj9dbM",
+  "oldDid": "did:oan:DISC:genesis-discovery-1",
+  "targetAddress": "0xe8fdbd6f07937c828bae5a5ab135502571e6f846e1d2d4e8d54f15d61e335958",
+  "endpoint": "https://discovery-1.genesis.openagenet.local",
+  "authorizedDomains": [
+    "genesis.openagenet.local",
+    "openagenet.local"
+  ],
+  "status": "active",
+  "network": "sui-mainnet",
+  "packageId": "0x1b602d575ddf1ced075f9d2986bfe53cd7d4e59967ec26a0d949009c7b2c9d6c",
+  "bulletinObjectId": "0xb900fb0dc1ebd58fbc4d0c697d644c861578ed948e26638836e338de0d1a3b46",
+  "rootAuthorityDid": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+  "proposalId": 28,
+  "eventSequence": 23,
+  "chainGovernanceStatus": "active",
+  "description": "Genesis Discovery node 1 for local integration and load tests.",
+  "keyFiles": {
+    "privateKeyJwk": "private-key.jwk.json",
+    "publicKeyJwk": "public-key.jwk.json"
+  },
+  "governanceNoticeFile": "chain-governance-notice.json",
+  "rootAuthorizationCredentialFile": "root-authorization-vc.json",
+  "didDocumentFile": "did-document.json",
+  "createDigest": "HssQRmZkuJQVr94K3xBkXiaT6Xo6igBtTLR4ogehg79o",
+  "voteDigests": [
+    "FgBRvMT8jx6N3o1Lwhpaz5Dgeni8Ycy1YfvXrLweZCDG",
+    "GMnfbfXs3YGzDdY6nRRXn3VjXfL5zM76arfkABrVBSbR",
+    "6hrNLRzMdyiMqkEYAL9ofMRfRxN4akJmtkPEjNkBNYwR"
+  ],
+  "refreshDigest": "6BHZQXfyLKp7Swa5xz6dqbCfvfgiogb3B1mM9MMZu45G",
+  "latestAction": "recover-after-did-document-refresh",
+  "latestGovernanceRefresh": {
+    "suspendProposalId": 27,
+    "suspendEventSequence": 22,
+    "suspendDigest": "GNgCdokdznGXDhjma69ucbvga9QNkDLGoPKKiHbVjBhU",
+    "recoverProposalId": 28,
+    "recoverEventSequence": 23,
+    "recoverDigest": "6BHZQXfyLKp7Swa5xz6dqbCfvfgiogb3B1mM9MMZu45G",
+    "didDocumentStableHash": "sha256:ee4796c68d9a7a97a836a6d06937c2ac5e5e2c2dc9194ab1135237cd5aec2521",
+    "note": "Recover event restores active state after refreshing DID Document metadata hash. Stable hash excludes oanMetadata.chainGovernance to avoid circular hash changes."
+  },
+  "bootstrapGovernance": {
+    "proposalId": 9,
+    "eventSequence": 9,
+    "createDigest": "HssQRmZkuJQVr94K3xBkXiaT6Xo6igBtTLR4ogehg79o",
+    "refreshDigest": "PRArE3ZjJNd8PPyBmF8pCBFPLwcyAqg5QrnWKyQLqDU"
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "generatedAt": "2026-06-04T00:00:00Z",
+  "network": "sui-mainnet",
+  "packageId": "0x1b602d575ddf1ced075f9d2986bfe53cd7d4e59967ec26a0d949009c7b2c9d6c",
+  "bulletinObjectId": "0xb900fb0dc1ebd58fbc4d0c697d644c861578ed948e26638836e338de0d1a3b46",
+  "rootAuthorityDid": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+  "root": {
+    "id": "genesis-root",
+    "role": "root",
+    "did": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+    "directory": "genesis-root",
+    "endpoint": "https://root.genesis.openagenet.local",
+    "status": "active"
+  },
+  "nodes": [
+    {
+      "id": "genesis-registrar-1",
+      "role": "registrar",
+      "did": "did:oan:INRG:Edi352G96M7kgMB84enoEG2mj8AsDm3u",
+      "oldDid": "did:oan:REG:genesis-registrar-1",
+      "directory": "genesis-registrar-1",
+      "endpoint": "https://registrar-1.genesis.openagenet.local",
+      "status": "active",
+      "chainGovernanceStatus": "active",
+      "proposalId": 22,
+      "eventSequence": 17,
+      "createDigest": "SE2vUPsUM1AZdjfB7JHG2gqg2dwmZiqggncTDhgnE5U",
+      "refreshDigest": "Ecc8GDCTaKyrNNJghkU1VUyGhmqtUH8JHpqy7Uy6tJBn",
+      "latestAction": "recover-after-did-document-refresh"
+    },
+    {
+      "id": "genesis-registrar-2",
+      "role": "registrar",
+      "did": "did:oan:INRG:tnHnr58SjKKMTLrzcYBLaZsPCXBmzWMT",
+      "oldDid": "did:oan:REG:genesis-registrar-2",
+      "directory": "genesis-registrar-2",
+      "endpoint": "https://registrar-2.genesis.openagenet.local",
+      "status": "active",
+      "chainGovernanceStatus": "active",
+      "proposalId": 24,
+      "eventSequence": 19,
+      "createDigest": "7DWfZP1HKdx4p3eHPuvGKA9RREJGLvuRSLNKHgGTdWr3",
+      "refreshDigest": "75zykEkTBJgKrXcmULVptJGg3oLAe4jroiCrb8Chwa46",
+      "latestAction": "recover-after-did-document-refresh"
+    },
+    {
+      "id": "genesis-registrar-3",
+      "role": "registrar",
+      "did": "did:oan:INRG:3Bcv7D3G83ccQDRuJ5ucxeXLLTZPwnt4",
+      "oldDid": "did:oan:REG:genesis-registrar-3",
+      "directory": "genesis-registrar-3",
+      "endpoint": "https://registrar-3.genesis.openagenet.local",
+      "status": "active",
+      "chainGovernanceStatus": "active",
+      "proposalId": 26,
+      "eventSequence": 21,
+      "createDigest": "DjhJ3Xyt98SFoUqc9TRkCciU73d3im3CtacSsUezLvTM",
+      "refreshDigest": "5b7KH1Q6nKtp9TFPAm4EW5PXd5rKHZZzu6Qz5dFjJNUa",
+      "latestAction": "recover-after-did-document-refresh"
+    },
+    {
+      "id": "genesis-discovery-1",
+      "role": "discovery",
+      "did": "did:oan:INDS:WvG7335ct9cAwtCmmB9FWBeTJzwj9dbM",
+      "oldDid": "did:oan:DISC:genesis-discovery-1",
+      "directory": "genesis-discovery-1",
+      "endpoint": "https://discovery-1.genesis.openagenet.local",
+      "status": "active",
+      "chainGovernanceStatus": "active",
+      "proposalId": 28,
+      "eventSequence": 23,
+      "createDigest": "HssQRmZkuJQVr94K3xBkXiaT6Xo6igBtTLR4ogehg79o",
+      "refreshDigest": "6BHZQXfyLKp7Swa5xz6dqbCfvfgiogb3B1mM9MMZu45G",
+      "latestAction": "recover-after-did-document-refresh"
+    },
+    {
+      "id": "genesis-discovery-2",
+      "role": "discovery",
+      "did": "did:oan:INDS:aWL8xUXFswrAyZahN8hn1Xutx8v3YB5K",
+      "oldDid": "did:oan:DISC:genesis-discovery-2",
+      "directory": "genesis-discovery-2",
+      "endpoint": "https://discovery-2.genesis.openagenet.local",
+      "status": "active",
+      "chainGovernanceStatus": "active",
+      "proposalId": 30,
+      "eventSequence": 25,
+      "createDigest": "CfHDPZAiLKekZ6JmniP1ng6ouukha7bvVDomuKP42nZp",
+      "refreshDigest": "75YzF1Pqqh2SrLNokBE8oSCW9SHyVFaUnbaMcuDS5b2o",
+      "latestAction": "recover-after-did-document-refresh"
+    }
+  ]
+}

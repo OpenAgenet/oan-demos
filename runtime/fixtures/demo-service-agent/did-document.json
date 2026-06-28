@@ -1,0 +1,73 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/did/v1",
+    "https://w3id.org/oan/v1"
+  ],
+  "id": "did:oan:AGDM:3Sxc7CHcNx1xW4TajVJqS2KDRJDBbTcG",
+  "verificationMethod": [
+    {
+      "id": "did:oan:AGDM:3Sxc7CHcNx1xW4TajVJqS2KDRJDBbTcG#key-1",
+      "type": "Ed25519VerificationKey2020",
+      "controller": "did:oan:AGDM:3Sxc7CHcNx1xW4TajVJqS2KDRJDBbTcG",
+      "cryptoSuite": "ed25519-sha256",
+      "publicKeyFormat": "multibase",
+      "publicKeyMultibase": "zfhtD9t5qNPsbGYqgndeu1niwe74wkQBbVfnxxkypx9r",
+      "publicKeyJwk": {
+        "crv": "Ed25519",
+        "x": "CepMFivgNoqd4GAkF2X6nV9jbjS2GiDbxAO6_5vJ4bU",
+        "kty": "OKP"
+      }
+    }
+  ],
+  "authentication": [
+    "did:oan:AGDM:3Sxc7CHcNx1xW4TajVJqS2KDRJDBbTcG#key-1"
+  ],
+  "assertionMethod": [
+    "did:oan:AGDM:3Sxc7CHcNx1xW4TajVJqS2KDRJDBbTcG#key-1"
+  ],
+  "service": [
+    {
+      "id": "did:oan:AGDM:3Sxc7CHcNx1xW4TajVJqS2KDRJDBbTcG#service",
+      "type": "AgentService",
+      "serviceEndpoint": "http://127.0.0.1:9001/agent/invoke",
+      "version": "1.0.0",
+      "protocol": "http",
+      "serverType": "benchmark-resource",
+      "port": 9001
+    }
+  ],
+  "oanMetadata": {
+    "subjectType": "agent_service",
+    "resourceType": "agent_service",
+    "identityType": "service-agent",
+    "ttl": 300,
+    "resourceDescription": {
+      "name": "Trusted hello demo Service Agent",
+      "description": "Service Agent used by OAN trusted invocation examples.",
+      "capabilityTags": [
+        "gbt4754-2017.01"
+      ],
+      "useCaseExamples": [
+        "Discover the Service Agent through OAN Discovery.",
+        "Verify trusted invocation request and response signatures."
+      ]
+    },
+    "capabilityTags": [
+      "gbt4754-2017.01"
+    ],
+    "protocolBindings": [
+      {
+        "id": "did:oan:AGDM:3Sxc7CHcNx1xW4TajVJqS2KDRJDBbTcG#binding-http",
+        "protocol": "http",
+        "version": "1.0.0",
+        "transport": "http",
+        "serviceRef": "did:oan:AGDM:3Sxc7CHcNx1xW4TajVJqS2KDRJDBbTcG#service"
+      }
+    ],
+    "implementationLinks": [],
+    "credentialRequirements": [],
+    "servicePolicy": "public-local-resolution",
+    "networkScope": "oan-local",
+    "lifecycleState": "active"
+  }
+}

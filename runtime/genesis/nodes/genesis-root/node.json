@@ -1,0 +1,16 @@
+{
+  "id": "genesis-root",
+  "role": "root",
+  "did": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+  "endpoint": "https://root.genesis.openagenet.local",
+  "network": "sui-mainnet",
+  "packageId": "0x1b602d575ddf1ced075f9d2986bfe53cd7d4e59967ec26a0d949009c7b2c9d6c",
+  "bulletinObjectId": "0xb900fb0dc1ebd58fbc4d0c697d644c861578ed948e26638836e338de0d1a3b46",
+  "status": "active",
+  "description": "Private genesis Root authority matching the chain rootAuthorityDid.",
+  "keyFiles": {
+    "privateKeyJwk": "private-key.jwk.json",
+    "publicKeyJwk": "public-key.jwk.json"
+  },
+  "didDocumentFile": "did-document.json"
+}

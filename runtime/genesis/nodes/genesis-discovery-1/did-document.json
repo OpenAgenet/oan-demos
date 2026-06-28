@@ -1,0 +1,123 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/did/v1",
+    "https://w3id.org/oan/v1"
+  ],
+  "id": "did:oan:INDS:WvG7335ct9cAwtCmmB9FWBeTJzwj9dbM",
+  "controller": "did:oan:INDS:WvG7335ct9cAwtCmmB9FWBeTJzwj9dbM",
+  "verificationMethod": [
+    {
+      "id": "did:oan:INDS:WvG7335ct9cAwtCmmB9FWBeTJzwj9dbM#key-1",
+      "type": "JsonWebKey2020",
+      "controller": "did:oan:INDS:WvG7335ct9cAwtCmmB9FWBeTJzwj9dbM",
+      "publicKeyJwk": {
+        "crv": "Ed25519",
+        "x": "ogRochGPaQWpSC56GHx8XXaX6INMbWkQ1IlmlCN5LQA",
+        "kty": "OKP",
+        "kid": "did:oan:INDS:WvG7335ct9cAwtCmmB9FWBeTJzwj9dbM#key-1"
+      },
+      "cryptoSuite": "Ed25519Sha256",
+      "publicKeyFormat": "multibase",
+      "publicKeyMultibase": "zBuSwqcmJN1VM23zs4yAWubZjrobHRADcAk7QXZrJRLJB"
+    }
+  ],
+  "authentication": [
+    "did:oan:INDS:WvG7335ct9cAwtCmmB9FWBeTJzwj9dbM#key-1"
+  ],
+  "assertionMethod": [
+    "did:oan:INDS:WvG7335ct9cAwtCmmB9FWBeTJzwj9dbM#key-1"
+  ],
+  "capabilityInvocation": [
+    "did:oan:INDS:WvG7335ct9cAwtCmmB9FWBeTJzwj9dbM#key-1"
+  ],
+  "service": [
+    {
+      "id": "did:oan:INDS:WvG7335ct9cAwtCmmB9FWBeTJzwj9dbM#discovery-api",
+      "type": "OANDiscoveryService",
+      "serviceEndpoint": "https://discovery-1.genesis.openagenet.local",
+      "version": "1.0.0",
+      "protocol": "https",
+      "serverType": "genesis-discovery",
+      "port": 443
+    }
+  ],
+  "oanMetadata": {
+    "subjectType": "infrastructure_node",
+    "resourceType": "infrastructure_node",
+    "identityType": "discovery-node",
+    "nodeRole": "discovery",
+    "ttl": 300,
+    "resourceDescription": {
+      "name": "OAN Genesis discovery node",
+      "description": "Genesis Discovery node 1 for local integration and load tests.",
+      "capabilityTags": [
+        "discovery",
+        "semantic-index",
+        "capability-routing"
+      ],
+      "useCaseExamples": [
+        "Operate as a genesis discovery node in OAN integration tests.",
+        "Reuse the already-governed genesis discovery identity for official bootstrap deployment."
+      ]
+    },
+    "capabilityTags": [
+      "discovery",
+      "semantic-index",
+      "capability-routing"
+    ],
+    "protocolBindings": [
+      {
+        "id": "did:oan:INDS:WvG7335ct9cAwtCmmB9FWBeTJzwj9dbM#binding-discovery-api",
+        "protocol": "https",
+        "version": "1.0.0",
+        "transport": "http",
+        "serviceRef": "did:oan:INDS:WvG7335ct9cAwtCmmB9FWBeTJzwj9dbM#discovery-api"
+      }
+    ],
+    "addressBindings": [
+      {
+        "id": "did:oan:INDS:WvG7335ct9cAwtCmmB9FWBeTJzwj9dbM#addr-discovery-api",
+        "addressType": "endpoint",
+        "network": "https-genesis",
+        "address": "https://discovery-1.genesis.openagenet.local",
+        "controller": "did:oan:INDS:WvG7335ct9cAwtCmmB9FWBeTJzwj9dbM",
+        "purpose": "service"
+      },
+      {
+        "type": "sui-mainnet-address",
+        "value": "0xe8fdbd6f07937c828bae5a5ab135502571e6f846e1d2d4e8d54f15d61e335958"
+      }
+    ],
+    "authorizedDomains": [
+      "genesis.openagenet.local",
+      "openagenet.local"
+    ],
+    "servicePolicy": "private-genesis-infrastructure-service",
+    "networkScope": "sui-mainnet-genesis",
+    "lifecycleState": "active",
+    "distributionPolicy": "private-genesis-infrastructure-material",
+    "chainGovernance": {
+      "network": "sui-mainnet",
+      "packageId": "0x1b602d575ddf1ced075f9d2986bfe53cd7d4e59967ec26a0d949009c7b2c9d6c",
+      "bulletinObjectId": "0xb900fb0dc1ebd58fbc4d0c697d644c861578ed948e26638836e338de0d1a3b46",
+      "status": "active",
+      "proposalId": 28,
+      "eventSequence": 23,
+      "refreshDigest": "6BHZQXfyLKp7Swa5xz6dqbCfvfgiogb3B1mM9MMZu45G",
+      "latestAction": "recover-after-did-document-refresh",
+      "didDocumentStableHash": "sha256:ee4796c68d9a7a97a836a6d06937c2ac5e5e2c2dc9194ab1135237cd5aec2521",
+      "suspendProposalId": 27,
+      "suspendEventSequence": 22,
+      "suspendDigest": "GNgCdokdznGXDhjma69ucbvga9QNkDLGoPKKiHbVjBhU",
+      "bootstrapGovernance": {
+        "proposalId": 9,
+        "eventSequence": 9,
+        "createDigest": "HssQRmZkuJQVr94K3xBkXiaT6Xo6igBtTLR4ogehg79o",
+        "refreshDigest": "PRArE3ZjJNd8PPyBmF8pCBFPLwcyAqg5QrnWKyQLqDU"
+      },
+      "hashNote": "didDocumentStableHash excludes oanMetadata.chainGovernance to avoid circular hash changes."
+    },
+    "rootAuthorityDid": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+    "note": "This infrastructure DID Document reuses did:oan syntax and DID Document verification semantics, but it is not published through OAN ordinary resource registration, Root distribution, CDN publication, or Discovery indexing."
+  }
+}

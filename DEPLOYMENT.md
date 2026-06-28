@@ -7,78 +7,75 @@
 
 # OAN Demos Deployment Guide
 
-This guide explains how to deploy and start `oan-demos` after cloning it into a
-local OpenAgenet workspace. The demo is a local visual console for real OAN
-Root, Registrar, CDN, Discovery, NATS, and Agent flows.
+This guide explains how to start `oan-demos` as a local visual console for real
+OAN Root, Registrar, CDN, Discovery, NATS, and Agent flows.
 
 ## 1. Repository Layout
 
-`oan-demos` is designed to live beside the OAN implementation repositories under
-one workspace root. The default workspace layout is:
+For normal demo use, `oan-demos` can run from its own repository directory. The
+runtime payload is bundled inside:
 
 ```text
-D:\Works\VscodeProject\OAN
-  oan-demos\
-  oan-examples\
-  oan-design-docs\
-  oan-protocol-common\
-  oan-root-services\
-  oan-registrar-node\
-  oan-discovery-node\
-  oan-agent-py\
+oan-demos\
+  runtime\
+    bin\win32-x64\
+    fixtures\
+    genesis\nodes\
+    agent-py\
 ```
 
-The demo server resolves sibling repositories from its parent directory. If the
-workspace root is different, keep the same sibling layout or set the environment
-variables listed below.
+The bundled Windows x64 executables are:
+
+- `root-node.exe`
+- `registrar-node.exe`
+- `discovery-node.exe`
+- `cdn-node.exe`
+- `cdn-publisher.exe`
+- `nats-server.exe`
 
 ## 2. Required Dependencies
 
 Install these tools before starting the demo:
 
 - Node.js and npm.
-- Rust toolchain with Cargo, required to build and run the Rust OAN services.
 - Python and `uv`, required by the Service Agent scenario.
 - PostgreSQL server listening on `127.0.0.1:5432`.
 - PostgreSQL CLI tools, especially `psql.exe`.
-- NATS Server with JetStream support.
 
-The current Windows test environment uses these fixed runtime locations:
+Rust, Cargo, sibling OAN implementation repositories, and an external NATS
+install are not required for normal bundled-runtime demo use.
+
+The current Windows test environment keeps PostgreSQL CLI tools at:
 
 ```text
-NATS server:
-D:\ProgramFiles\nats\nats-server\nats-server.exe
-
-PostgreSQL tools:
 D:\ProgramFiles\postgresql\bin
 ```
 
-The benchmark helper searches `D:\ProgramFiles\postgresql\bin` for PostgreSQL
-CLI tools. The demo server also sets `OAN_NATS_SERVER_PATH` to the fixed NATS
-path when the variable is not already defined.
+If your `psql.exe` is elsewhere, add it to `PATH` before starting the demo.
 
 ## 3. Environment Variables
 
-In the default sibling layout, no manual environment variables are required for
-the demo itself. The server sets these defaults automatically:
+No manual variables are required in the default bundled mode. The demo server
+sets these defaults automatically:
 
 ```text
-OAN_WORKSPACE_ROOT=<parent directory of oan-demos>
-OAN_PROTOCOL_COMMON_ROOT=<workspace>\oan-protocol-common
-OAN_ROOT_SERVICES_ROOT=<workspace>\oan-root-services
-OAN_REGISTRAR_NODE_ROOT=<workspace>\oan-registrar-node
-OAN_DISCOVERY_NODE_ROOT=<workspace>\oan-discovery-node
-OAN_EXAMPLES_ROOT=<workspace>\oan-examples
-OAN_DESIGN_DOCS_ROOT=<workspace>\oan-design-docs
-OAN_GENESIS_NODES_ROOT=<workspace>\oan-design-docs\genesis\nodes
-OAN_AGENT_PY_ROOT=<workspace>\oan-agent-py
+OAN_DEMOS_USE_BUNDLED_RUNTIME=true
+OAN_EXAMPLES_ROOT=<oan-demos>
+OAN_EXAMPLES_FIXTURES_ROOT=<oan-demos>\runtime\fixtures
+OAN_GENESIS_NODES_ROOT=<oan-demos>\runtime\genesis\nodes
+OAN_AGENT_PY_ROOT=<oan-demos>\runtime\agent-py
+OAN_NATS_SERVER_PATH=<oan-demos>\runtime\bin\win32-x64\nats-server.exe
 OAN_BENCH_DB_BACKEND=postgres
-OAN_NATS_SERVER_PATH=D:\ProgramFiles\nats\nats-server\nats-server.exe
 OAN_DEMO_SERVER_PORT=8787
 OAN_DEMO_NATS_PORT=4522
 ```
 
-Override them only if your repository or runtime paths are different.
+PostgreSQL still runs outside the repository. If PostgreSQL requires a password,
+configure it in the same shell:
+
+```powershell
+$env:PGPASSWORD = "<your-postgres-password>"
+```
 
 ## 4. Install Node Dependencies
 
@@ -91,18 +88,18 @@ npm install
 
 ## 5. Preflight Checks
 
-Check PostgreSQL and NATS:
+Check PostgreSQL:
 
 ```powershell
 & D:\ProgramFiles\postgresql\bin\psql.exe -h 127.0.0.1 -U postgres -d postgres -c "select 1;"
-Test-Path D:\ProgramFiles\nats\nats-server\nats-server.exe
 ```
 
-If PostgreSQL requires a password, configure it in the same shell before running
-the demo, for example:
+Check bundled runtime files:
 
 ```powershell
-$env:PGPASSWORD = "<your-postgres-password>"
+Test-Path .\runtime\bin\win32-x64\root-node.exe
+Test-Path .\runtime\bin\win32-x64\nats-server.exe
+Test-Path .\runtime\genesis\nodes\genesis-root
 ```
 
 ## 6. Start the Demo
@@ -146,8 +143,6 @@ npm run dev
 
 ## 8. Ports Used by the Demo
 
-Each scenario starts a real local topology:
-
 | Component | Port |
 |---|---:|
 | Demo web UI | 5177 |
@@ -165,7 +160,7 @@ Each scenario starts a real local topology:
 
 ## 9. Scenarios
 
-The UI currently exposes three scenarios:
+The UI currently exposes these main scenarios:
 
 - `Service Agent`: registers and publishes one Service Agent, indexes it through
   both Discovery nodes, then performs User Agent discovery and trusted VC-based
@@ -177,7 +172,7 @@ The UI currently exposes three scenarios:
   Discovery indexing for 1000 mixed resources.
 
 Genesis infrastructure node identities are copied from
-`oan-design-docs\genesis\nodes`. Discovery authorized domains remain:
+`runtime\genesis\nodes`. Discovery authorized domains remain:
 
 ```text
 genesis.openagenet.local
@@ -228,18 +223,69 @@ Demo logs:
 
 ```text
 oan-demos\.demo-logs
+oan-demos\.run-logs
 ```
 
-Transient OAN scenario working data is created under the benchmark work
-directory managed by `oan-examples`, usually:
+Transient OAN scenario working data is created under:
 
 ```text
-oan-examples\.oan-benchmark-work
+oan-demos\.oan-benchmark-work
 ```
 
 These paths are local runtime artifacts and should not be committed.
 
-## 13. Cleanup
+## 13. Refresh Bundled Runtime
+
+When upstream OAN node binaries, fixtures, genesis identities, or Python agent
+code should be promoted into the standalone demo repository, build the upstream
+services in release mode first, then run:
+
+```powershell
+npm run sync:runtime
+```
+
+The default source workspace is the parent directory of `oan-demos`. Override it
+when needed:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/sync-runtime.ps1 `
+  -WorkspaceRoot D:\Works\VscodeProject\OAN `
+  -NatsServerPath D:\ProgramFiles\nats\nats-server\nats-server.exe
+```
+
+The refresh script copies:
+
+- release OAN node executables
+- NATS server executable
+- demo fixtures
+- genesis node identities
+- Python agent code, excluding nested `.git`
+
+## 14. Source-Repo Development Mode
+
+For local OAN service development, the demo can still build and run from sibling
+implementation repositories:
+
+```powershell
+$env:OAN_DEMOS_USE_BUNDLED_RUNTIME = "false"
+npm run demo
+```
+
+In this mode, keep the sibling repositories under one workspace root and ensure
+Rust/Cargo are installed:
+
+```text
+<workspace>\
+  oan-demos\
+  oan-examples\
+  oan-design-docs\
+  oan-root-services\
+  oan-registrar-node\
+  oan-discovery-node\
+  oan-agent-py\
+```
+
+## 15. Cleanup
 
 If a scenario is interrupted, stop leftover demo processes from PowerShell:
 
@@ -268,7 +314,7 @@ Get-CimInstance Win32_Process |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 ```
 
-## 14. Troubleshooting
+## 16. Troubleshooting
 
 If the web UI opens but Run does nothing, check the backend:
 
@@ -279,7 +325,7 @@ Invoke-RestMethod -Uri 'http://127.0.0.1:8787/api/snapshot'
 If NATS fails to start, verify:
 
 ```powershell
-Test-Path D:\ProgramFiles\nats\nats-server\nats-server.exe
+Test-Path .\runtime\bin\win32-x64\nats-server.exe
 ```
 
 If PostgreSQL setup fails, verify:

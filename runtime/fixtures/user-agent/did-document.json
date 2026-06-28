@@ -1,0 +1,52 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/did/v1",
+    "https://w3id.org/oan/v1"
+  ],
+  "id": "did:oan:AGUS:ef9z6DauW5NJ1FG9UX1FDgVVRe2tQJiWzVHvVX9LZWGdND",
+  "verificationMethod": [
+    {
+      "id": "did:oan:AGUS:ef9z6DauW5NJ1FG9UX1FDgVVRe2tQJiWzVHvVX9LZWGdND#key-1",
+      "type": "Ed25519VerificationKey2020",
+      "controller": "did:oan:AGUS:ef9z6DauW5NJ1FG9UX1FDgVVRe2tQJiWzVHvVX9LZWGdND",
+      "cryptoSuite": "Ed25519Sha256",
+      "publicKeyFormat": "multibase",
+      "publicKeyMultibase": "z9z6DauW5NJ1FG9UX1FDgVVRe2tQJiWzVHvVX9LZWGdND",
+      "publicKeyJwk": {
+        "crv": "Ed25519",
+        "x": "hX2AGPedP9J57f4ISDivs5DnEbSMldwzy5Hpe_iTycY",
+        "kty": "OKP"
+      }
+    }
+  ],
+  "authentication": [
+    "did:oan:AGUS:ef9z6DauW5NJ1FG9UX1FDgVVRe2tQJiWzVHvVX9LZWGdND#key-1"
+  ],
+  "assertionMethod": [
+    "did:oan:AGUS:ef9z6DauW5NJ1FG9UX1FDgVVRe2tQJiWzVHvVX9LZWGdND#key-1"
+  ],
+  "service": [],
+  "oanMetadata": {
+    "resourceType": "agent",
+    "subjectType": "agent",
+    "identityType": "user-agent",
+    "ttl": 300,
+    "addressBindings": [],
+    "agentDescription": {
+      "capabilityDescription": "A local demo User Agent that discovers Service Agents, resolves DID Documents, verifies signatures, and performs trusted invocation.",
+      "capabilityTags": [
+        "user-agent",
+        "discovery-client",
+        "trusted-invocation",
+        "mcp-client",
+        "a2a-client"
+      ],
+      "useCaseExamples": [
+        "Discover a Service Agent by capability.",
+        "Invoke a Service Agent with a signed request."
+      ]
+    },
+    "servicePolicy": "public-local-resolution",
+    "networkScope": "oan-local"
+  }
+}

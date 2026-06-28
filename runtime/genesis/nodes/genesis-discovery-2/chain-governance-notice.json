@@ -1,0 +1,39 @@
+{
+  "type": "OANChainGovernanceNotice",
+  "noticeVersion": "2026-06-04",
+  "network": "sui-mainnet",
+  "packageId": "0x1b602d575ddf1ced075f9d2986bfe53cd7d4e59967ec26a0d949009c7b2c9d6c",
+  "bulletinObjectId": "0xb900fb0dc1ebd58fbc4d0c697d644c861578ed948e26638836e338de0d1a3b46",
+  "rootAuthorityDid": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+  "subjectDid": "did:oan:INDS:aWL8xUXFswrAyZahN8hn1Xutx8v3YB5K",
+  "oldSubjectDid": "did:oan:DISC:genesis-discovery-2",
+  "subjectType": 2,
+  "role": "discovery",
+  "proposalId": 30,
+  "eventSequence": 25,
+  "governanceResult": "active",
+  "endpoint": "https://discovery-2.genesis.openagenet.local",
+  "authorizedDomains": [
+    "genesis.openagenet.local",
+    "openagenet.local"
+  ],
+  "note": "This normalized did:oan infrastructure DID has been authorized by chain governance. Full infrastructure authorization still requires the Root-issued VC to verify.",
+  "createDigest": "CfHDPZAiLKekZ6JmniP1ng6ouukha7bvVDomuKP42nZp",
+  "voteDigests": [
+    "Cq158sMubLAGHvVCs9Jr2aj9iiu4g5ATjhoorCah7E8r",
+    "2B9djXAF3CZryaUGKpoLJzCoco8Yi2Vq1XRamoqPSUTD",
+    "6inpWUhWAnuAizhFftuHmu3uBPhZv3A4HxogMkhmgwMM"
+  ],
+  "refreshDigest": "75YzF1Pqqh2SrLNokBE8oSCW9SHyVFaUnbaMcuDS5b2o",
+  "latestAction": "recover-after-did-document-refresh",
+  "didDocumentStableHash": "sha256:981c07cc5a05cbaba3cc02d70fb34c087de6b8a5367c77a1568cb1e0b260de39",
+  "suspendProposalId": 29,
+  "suspendEventSequence": 24,
+  "suspendDigest": "9F3xCpsvJX4PeSwMifub5wxQ8UXBEeXY4QhxpHJpi1c4",
+  "bootstrapGovernance": {
+    "proposalId": 10,
+    "eventSequence": 10,
+    "createDigest": "CfHDPZAiLKekZ6JmniP1ng6ouukha7bvVDomuKP42nZp",
+    "refreshDigest": "65jWMrJcM78uELx1qYPfp1crhxkHMg312UmvSbGk9Hco"
+  }
+}

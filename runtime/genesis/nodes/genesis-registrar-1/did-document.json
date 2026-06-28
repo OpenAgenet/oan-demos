@@ -1,0 +1,120 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/did/v1",
+    "https://w3id.org/oan/v1"
+  ],
+  "id": "did:oan:INRG:Edi352G96M7kgMB84enoEG2mj8AsDm3u",
+  "controller": "did:oan:INRG:Edi352G96M7kgMB84enoEG2mj8AsDm3u",
+  "verificationMethod": [
+    {
+      "id": "did:oan:INRG:Edi352G96M7kgMB84enoEG2mj8AsDm3u#key-1",
+      "type": "JsonWebKey2020",
+      "controller": "did:oan:INRG:Edi352G96M7kgMB84enoEG2mj8AsDm3u",
+      "publicKeyJwk": {
+        "crv": "Ed25519",
+        "x": "-NqYOZ6o0RXPV357XFFH6CZLiXZSFYEz-a_m7BUsM_A",
+        "kty": "OKP",
+        "kid": "did:oan:INRG:Edi352G96M7kgMB84enoEG2mj8AsDm3u#key-1"
+      },
+      "cryptoSuite": "Ed25519Sha256",
+      "publicKeyFormat": "multibase",
+      "publicKeyMultibase": "zHkRSFA8ftMagkJDXFjQzhqeZfXxdFBJeD2zvd1gtzpNT"
+    }
+  ],
+  "authentication": [
+    "did:oan:INRG:Edi352G96M7kgMB84enoEG2mj8AsDm3u#key-1"
+  ],
+  "assertionMethod": [
+    "did:oan:INRG:Edi352G96M7kgMB84enoEG2mj8AsDm3u#key-1"
+  ],
+  "capabilityInvocation": [
+    "did:oan:INRG:Edi352G96M7kgMB84enoEG2mj8AsDm3u#key-1"
+  ],
+  "service": [
+    {
+      "id": "did:oan:INRG:Edi352G96M7kgMB84enoEG2mj8AsDm3u#registrar-api",
+      "type": "OANRegistrarService",
+      "serviceEndpoint": "https://registrar-1.genesis.openagenet.local",
+      "version": "1.0.0",
+      "protocol": "https",
+      "serverType": "genesis-registrar",
+      "port": 443
+    }
+  ],
+  "oanMetadata": {
+    "subjectType": "infrastructure_node",
+    "resourceType": "infrastructure_node",
+    "identityType": "registrar-node",
+    "nodeRole": "registrar",
+    "ttl": 300,
+    "resourceDescription": {
+      "name": "OAN Genesis registrar node",
+      "description": "Genesis Registrar node 1 for local integration and load tests.",
+      "capabilityTags": [
+        "registration",
+        "credential-issuance",
+        "did-document-validation"
+      ],
+      "useCaseExamples": [
+        "Operate as a genesis registrar node in OAN integration tests.",
+        "Reuse the already-governed genesis registrar identity for official bootstrap deployment."
+      ]
+    },
+    "capabilityTags": [
+      "registration",
+      "credential-issuance",
+      "did-document-validation"
+    ],
+    "protocolBindings": [
+      {
+        "id": "did:oan:INRG:Edi352G96M7kgMB84enoEG2mj8AsDm3u#binding-registrar-api",
+        "protocol": "https",
+        "version": "1.0.0",
+        "transport": "http",
+        "serviceRef": "did:oan:INRG:Edi352G96M7kgMB84enoEG2mj8AsDm3u#registrar-api"
+      }
+    ],
+    "addressBindings": [
+      {
+        "id": "did:oan:INRG:Edi352G96M7kgMB84enoEG2mj8AsDm3u#addr-registrar-api",
+        "addressType": "endpoint",
+        "network": "https-genesis",
+        "address": "https://registrar-1.genesis.openagenet.local",
+        "controller": "did:oan:INRG:Edi352G96M7kgMB84enoEG2mj8AsDm3u",
+        "purpose": "service"
+      },
+      {
+        "type": "sui-mainnet-address",
+        "value": "0x50c1bf938eb0621665ea555e2e8a3ac2debd902e47139a54cd42b19c12d2e44c"
+      }
+    ],
+    "authorizedDomains": [],
+    "servicePolicy": "private-genesis-infrastructure-service",
+    "networkScope": "sui-mainnet-genesis",
+    "lifecycleState": "active",
+    "distributionPolicy": "private-genesis-infrastructure-material",
+    "chainGovernance": {
+      "network": "sui-mainnet",
+      "packageId": "0x1b602d575ddf1ced075f9d2986bfe53cd7d4e59967ec26a0d949009c7b2c9d6c",
+      "bulletinObjectId": "0xb900fb0dc1ebd58fbc4d0c697d644c861578ed948e26638836e338de0d1a3b46",
+      "status": "active",
+      "proposalId": 22,
+      "eventSequence": 17,
+      "refreshDigest": "Ecc8GDCTaKyrNNJghkU1VUyGhmqtUH8JHpqy7Uy6tJBn",
+      "latestAction": "recover-after-did-document-refresh",
+      "didDocumentStableHash": "sha256:82570026b81979ed88a17eafa5a784f32f7c7f61b2a4b90227d0b446e28ef46b",
+      "suspendProposalId": 21,
+      "suspendEventSequence": 16,
+      "suspendDigest": "J9Wj35A9bYb1C2t7BFwvRuPiBMv9qqCbznX5Y3Q1cV4B",
+      "bootstrapGovernance": {
+        "proposalId": 6,
+        "eventSequence": 6,
+        "createDigest": "SE2vUPsUM1AZdjfB7JHG2gqg2dwmZiqggncTDhgnE5U",
+        "refreshDigest": "4gjBnwAgaJ9KCC7JNAQVtcDo5ENhxTCYzZcSSy9DG5VB"
+      },
+      "hashNote": "didDocumentStableHash excludes oanMetadata.chainGovernance to avoid circular hash changes."
+    },
+    "rootAuthorityDid": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+    "note": "This infrastructure DID Document reuses did:oan syntax and DID Document verification semantics, but it is not published through OAN ordinary resource registration, Root distribution, CDN publication, or Discovery indexing."
+  }
+}

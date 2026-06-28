@@ -21,6 +21,7 @@ import {
   ensureDir,
   ensurePostgresDatabasesFromConfigs,
   ensureServiceBinariesAsync,
+  genesisNodesRoot,
   getJson,
   listDiscoveryCandidates,
   loadIdentityMaterial,
@@ -46,7 +47,7 @@ import {
   writeBenchmarkRootConfig,
   writeGenesisAuthorizationState,
   writeJson,
-} from "../../../oan-examples/scripts/bench/shared.js";
+} from "./runtime/shared.js";
 import {
   buildTrustedInvocation,
   postJsonAllowFailure,
@@ -55,7 +56,7 @@ import {
   startPythonAgent,
   stopProcessTree,
   waitForHttpHealth,
-} from "../../../oan-examples/scripts/bench/example-flows.js";
+} from "./runtime/example-flows.js";
 
 const scenarioIds = new Set(["service-agent", "mixed-four", "mixed-1000", "authorization-history", "agentic-commerce"]);
 const demoDomains = ["genesis.openagenet.local", "openagenet.local"];
@@ -551,9 +552,8 @@ async function runAuthorizationHistoryScenario(scenarioId: DemoScenarioId, bus: 
 }
 
 function authorizationTopologyNodes(): DemoNode[] {
-  const genesisRoot = path.resolve(process.cwd(), "..", "oan-design-docs", "genesis", "nodes");
   const readDid = (name: string): string | undefined => {
-    const didPath = path.join(genesisRoot, name, "did-document.json");
+    const didPath = path.join(genesisNodesRoot, name, "did-document.json");
     return fs.existsSync(didPath) ? String(readJson<any>(didPath).id) : undefined;
   };
   return [
@@ -767,7 +767,7 @@ function node(id: string, label: string, kind: DemoNode["kind"], did?: string, p
 }
 
 async function startContext(context: DemoContext, bus: DemoEventBus): Promise<void> {
-  bus.emit({ kind: "node-started", scenarioId: context.scenarioId, title: "Building service binaries", message: "Compiling changed Root, Registrar, Discovery, CDN, and publisher services" });
+  bus.emit({ kind: "node-started", scenarioId: context.scenarioId, title: "Checking service binaries", message: "Verifying Root, Registrar, Discovery, CDN, and publisher services" });
   await ensureServiceBinariesAsync(["root-node", "registrar-node", "discovery-node", "cdn-node", "cdn-publisher"]);
   await startNats(context.natsRuntime, runtime.natsPort);
   bus.emit({ kind: "node-started", scenarioId: context.scenarioId, title: "NATS JetStream running", message: `Port ${runtime.natsPort}` });

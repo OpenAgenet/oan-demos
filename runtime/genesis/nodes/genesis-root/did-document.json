@@ -1,0 +1,102 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/did/v1",
+    "https://w3id.org/oan/v1"
+  ],
+  "id": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+  "controller": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+  "verificationMethod": [
+    {
+      "id": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm#key-1",
+      "type": "JsonWebKey2020",
+      "controller": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+      "publicKeyJwk": {
+        "crv": "Ed25519",
+        "x": "wP-zyusEaHphqRYIwTqjnhtLYEr2gCn9CySPsoPzXqQ",
+        "kty": "OKP",
+        "kid": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm#key-1"
+      },
+      "cryptoSuite": "Ed25519Sha256",
+      "publicKeyFormat": "multibase",
+      "publicKeyMultibase": "zDzPRVw74RHCxmCbSK9EFVC8uktpqhHYfQcfjYBYRuUSo"
+    }
+  ],
+  "authentication": [
+    "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm#key-1"
+  ],
+  "assertionMethod": [
+    "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm#key-1"
+  ],
+  "capabilityInvocation": [
+    "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm#key-1"
+  ],
+  "service": [
+    {
+      "id": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm#root-api",
+      "type": "OANRootService",
+      "serviceEndpoint": "https://root.genesis.openagenet.local",
+      "version": "1.0.0",
+      "protocol": "https",
+      "serverType": "genesis-root",
+      "port": 443
+    }
+  ],
+  "oanMetadata": {
+    "subjectType": "infrastructure_node",
+    "resourceType": "infrastructure_node",
+    "identityType": "root-node",
+    "nodeRole": "root",
+    "ttl": 300,
+    "resourceDescription": {
+      "name": "OAN Genesis Root authority",
+      "description": "Private genesis Root authority matching the rootAuthorityDid recorded in the deployed on-chain bulletin.",
+      "capabilityTags": [
+        "root",
+        "trust-anchor",
+        "authorization",
+        "bulletin"
+      ],
+      "useCaseExamples": [
+        "Operate as a genesis root node in OAN integration tests.",
+        "Reuse the already-governed genesis root identity for official bootstrap deployment."
+      ]
+    },
+    "capabilityTags": [
+      "root",
+      "trust-anchor",
+      "authorization",
+      "bulletin"
+    ],
+    "protocolBindings": [
+      {
+        "id": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm#binding-root-api",
+        "protocol": "https",
+        "version": "1.0.0",
+        "transport": "http",
+        "serviceRef": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm#root-api"
+      }
+    ],
+    "addressBindings": [
+      {
+        "id": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm#addr-root-api",
+        "addressType": "endpoint",
+        "network": "https-genesis",
+        "address": "https://root.genesis.openagenet.local",
+        "controller": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+        "purpose": "service"
+      }
+    ],
+    "authorizedDomains": [],
+    "servicePolicy": "private-genesis-infrastructure-service",
+    "networkScope": "sui-mainnet-genesis",
+    "lifecycleState": "active",
+    "distributionPolicy": "private-genesis-infrastructure-material",
+    "chainGovernance": {
+      "network": "sui-mainnet",
+      "packageId": "0x1b602d575ddf1ced075f9d2986bfe53cd7d4e59967ec26a0d949009c7b2c9d6c",
+      "bulletinObjectId": "0xb900fb0dc1ebd58fbc4d0c697d644c861578ed948e26638836e338de0d1a3b46",
+      "status": "active"
+    },
+    "note": "This Root DID material is private operator material and is not published through OAN ordinary resource registration, Root distribution, CDN publication, or Discovery indexing."
+  }
+}

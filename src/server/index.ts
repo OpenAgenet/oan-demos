@@ -8,18 +8,26 @@ import path from "node:path";
 import { DemoEventBus } from "./event-bus.js";
 
 const workspaceRoot = path.resolve(process.cwd(), "..");
+const demoRoot = process.cwd();
+const bundledRuntimeRoot = path.join(demoRoot, "runtime");
+const bundledBinRoot = path.join(
+  bundledRuntimeRoot,
+  "bin",
+  process.platform === "win32" ? "win32-x64" : `${process.platform}-${process.arch}`,
+);
 process.env.OAN_WORKSPACE_ROOT ??= workspaceRoot;
 process.env.OAN_PROTOCOL_COMMON_ROOT ??= path.join(workspaceRoot, "oan-protocol-common");
 process.env.OAN_ROOT_SERVICES_ROOT ??= path.join(workspaceRoot, "oan-root-services");
 process.env.OAN_REGISTRAR_NODE_ROOT ??= path.join(workspaceRoot, "oan-registrar-node");
 process.env.OAN_DISCOVERY_NODE_ROOT ??= path.join(workspaceRoot, "oan-discovery-node");
-process.env.OAN_EXAMPLES_ROOT ??= path.join(workspaceRoot, "oan-examples");
+process.env.OAN_EXAMPLES_ROOT ??= demoRoot;
+process.env.OAN_EXAMPLES_FIXTURES_ROOT ??= path.join(bundledRuntimeRoot, "fixtures");
 process.env.OAN_DESIGN_DOCS_ROOT ??= path.join(workspaceRoot, "oan-design-docs");
-process.env.OAN_GENESIS_NODES_ROOT ??= path.join(workspaceRoot, "oan-design-docs", "genesis", "nodes");
-process.env.OAN_AGENT_PY_ROOT ??= path.join(workspaceRoot, "oan-agent-py");
+process.env.OAN_GENESIS_NODES_ROOT ??= path.join(bundledRuntimeRoot, "genesis", "nodes");
+process.env.OAN_AGENT_PY_ROOT ??= path.join(bundledRuntimeRoot, "agent-py");
 process.env.OAN_BENCH_DB_BACKEND ??= "postgres";
 process.env.OAN_BENCH_SKIP_ENV_PREFLIGHT ??= "true";
-process.env.OAN_NATS_SERVER_PATH ??= path.join("D:", "ProgramFiles", "nats", "nats-server", "nats-server.exe");
+process.env.OAN_NATS_SERVER_PATH ??= path.join(bundledBinRoot, `nats-server${process.platform === "win32" ? ".exe" : ""}`);
 
 const bus = new DemoEventBus();
 const port = Number.parseInt(process.env.OAN_DEMO_SERVER_PORT ?? "8787", 10);

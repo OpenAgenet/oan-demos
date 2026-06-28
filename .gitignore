@@ -2,5 +2,8 @@ node_modules/
 dist/
 .demo-logs/
 .run-logs/
+.oan-benchmark-pids/
+.oan-benchmark-reports/
+.oan-benchmark-work/
 .demo-server.log
 .demo-server.err

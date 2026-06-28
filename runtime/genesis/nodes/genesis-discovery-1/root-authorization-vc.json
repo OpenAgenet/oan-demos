@@ -1,0 +1,57 @@
+{
+  "@context": [
+    "https://www.w3.org/2018/credentials/v1",
+    "https://openagenet.org/credentials/v1"
+  ],
+  "id": "urn:oan:genesis:root-authorization:genesis-discovery-1",
+  "type": [
+    "VerifiableCredential",
+    "OANInfrastructureAuthorizationCredential"
+  ],
+  "issuer": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm",
+  "issuanceDate": "2026-06-04T00:00:00Z",
+  "credentialSubject": {
+    "id": "did:oan:INDS:WvG7335ct9cAwtCmmB9FWBeTJzwj9dbM",
+    "role": "discovery",
+    "subjectType": 2,
+    "endpoint": "https://discovery-1.genesis.openagenet.local",
+    "authorizedDomains": [
+      "genesis.openagenet.local",
+      "openagenet.local"
+    ],
+    "didDocumentFile": "did-document.json"
+  },
+  "credentialStatus": {
+    "type": "OANChainGovernanceBackedAuthorizationStatus2026",
+    "status": "active",
+    "chainGovernanceNoticeFile": "chain-governance-notice.json",
+    "network": "sui-mainnet",
+    "packageId": "0x1b602d575ddf1ced075f9d2986bfe53cd7d4e59967ec26a0d949009c7b2c9d6c",
+    "bulletinObjectId": "0xb900fb0dc1ebd58fbc4d0c697d644c861578ed948e26638836e338de0d1a3b46",
+    "expectedGovernanceState": "active",
+    "proposalId": 28,
+    "eventSequence": 23,
+    "createDigest": "HssQRmZkuJQVr94K3xBkXiaT6Xo6igBtTLR4ogehg79o",
+    "refreshDigest": "6BHZQXfyLKp7Swa5xz6dqbCfvfgiogb3B1mM9MMZu45G",
+    "latestAction": "recover-after-did-document-refresh",
+    "didDocumentStableHash": "sha256:ee4796c68d9a7a97a836a6d06937c2ac5e5e2c2dc9194ab1135237cd5aec2521",
+    "suspendProposalId": 27,
+    "suspendEventSequence": 22,
+    "suspendDigest": "GNgCdokdznGXDhjma69ucbvga9QNkDLGoPKKiHbVjBhU",
+    "bootstrapGovernance": {
+      "proposalId": 9,
+      "eventSequence": 9,
+      "createDigest": "HssQRmZkuJQVr94K3xBkXiaT6Xo6igBtTLR4ogehg79o",
+      "refreshDigest": "PRArE3ZjJNd8PPyBmF8pCBFPLwcyAqg5QrnWKyQLqDU"
+    }
+  },
+  "proof": {
+    "type": "OANEd25519Signature2026",
+    "cryptosuite": "ed25519-jcs-2026",
+    "proofPurpose": "assertionMethod",
+    "verificationMethod": "did:oan:AGRT:ef6acvLB7aJ2WZVGmzb5hy4hwpuNbyh2e1yjWugrQLyEAm#key-1",
+    "created": "2026-06-04T00:00:00Z",
+    "canonicalizationAlgorithm": "JCS-RFC8785-compatible-key-sorted-json",
+    "proofValue": "OWESBlkfj_m_bVAt3jYbvapH4f4WfnGWGtwj-OArDsWnqXNhK2QhhHn2wACK9ea9tDu5RIt5XpODrxOOwtdHCg"
+  }
+}
