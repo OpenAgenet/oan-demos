@@ -6,7 +6,9 @@
   "oldDid": "did:oan:REG:genesis-registrar-1",
   "targetAddress": "0x50c1bf938eb0621665ea555e2e8a3ac2debd902e47139a54cd42b19c12d2e44c",
   "endpoint": "https://registrar-1.genesis.openagenet.local",
-  "authorizedDomains": [],
+  "authorizedDomains": [
+    "*"
+  ],
   "status": "active",
   "network": "sui-mainnet",
   "packageId": "0x1b602d575ddf1ced075f9d2986bfe53cd7d4e59967ec26a0d949009c7b2c9d6c",

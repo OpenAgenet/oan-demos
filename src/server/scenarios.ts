@@ -59,7 +59,7 @@ import {
 } from "./runtime/example-flows.js";
 
 const scenarioIds = new Set(["service-agent", "mixed-four", "mixed-1000", "authorization-history", "agentic-commerce"]);
-const demoDomains = ["genesis.openagenet.local", "openagenet.local"];
+const demoDomains = ["*"];
 
 interface DemoRuntime {
   rootPort: number;
@@ -625,8 +625,8 @@ function authorizationReplayEvents(): AuthorizationReplayEvent[] {
     { time: "2026-06-04 confirmed", proposalId: "6", eventSequence: "6", nodeId: "registrar-1", nodeName: "genesis-registrar-1", role: "registrar", action: "authorized", label: "authorized", note: "Normalized did:oan:INRG:* DID" },
     { time: "2026-06-04 confirmed", proposalId: "7", eventSequence: "7", nodeId: "registrar-2", nodeName: "genesis-registrar-2", role: "registrar", action: "authorized", label: "authorized", note: "Normalized DID" },
     { time: "2026-06-04 confirmed", proposalId: "8", eventSequence: "8", nodeId: "registrar-3", nodeName: "genesis-registrar-3", role: "registrar", action: "authorized", label: "authorized", note: "Normalized DID" },
-    { time: "2026-06-04 confirmed", proposalId: "9", eventSequence: "9", nodeId: "discovery-1", nodeName: "genesis-discovery-1", role: "discovery", action: "authorized", label: "authorized", note: "Domains: genesis.openagenet.local, openagenet.local" },
-    { time: "2026-06-04 confirmed", proposalId: "10", eventSequence: "10", nodeId: "discovery-2", nodeName: "genesis-discovery-2", role: "discovery", action: "authorized", label: "authorized", note: "Domains: genesis.openagenet.local, openagenet.local" },
+    { time: "2026-06-04 confirmed", proposalId: "9", eventSequence: "9", nodeId: "discovery-1", nodeName: "genesis-discovery-1", role: "discovery", action: "authorized", label: "authorized", note: "Authorized domains: *" },
+    { time: "2026-06-04 confirmed", proposalId: "10", eventSequence: "10", nodeId: "discovery-2", nodeName: "genesis-discovery-2", role: "discovery", action: "authorized", label: "authorized", note: "Authorized domains: *" },
     { time: "2026-06-04 confirmed", proposalId: "11", eventSequence: "11", nodeId: "registrar-1", nodeName: "genesis-registrar-1 legacy DID", role: "registrar", action: "unchanged", label: "legacy revoked", note: "Legacy REG DID revoked; normalized DID remains authorized" },
     { time: "2026-06-04 confirmed", proposalId: "12", eventSequence: "12", nodeId: "registrar-2", nodeName: "genesis-registrar-2 legacy DID", role: "registrar", action: "unchanged", label: "legacy revoked", note: "Legacy REG DID revoked; normalized DID remains authorized" },
     { time: "2026-06-04 confirmed", proposalId: "13", eventSequence: "13", nodeId: "registrar-3", nodeName: "genesis-registrar-3 legacy DID", role: "registrar", action: "unchanged", label: "legacy revoked", note: "Legacy REG DID revoked; normalized DID remains authorized" },
@@ -833,7 +833,8 @@ async function runServiceAgentScenario(context: DemoContext, bus: DemoEventBus):
   const resource = createResourceIdentity({
     semanticCode: "AGDM",
     resourceType: "agent_service",
-    capabilityTags: ["openagenet.local", "trusted-demo", "gbt4754-2017.01"],
+    capabilityTags: ["openagenet.local", "trusted-demo", "domain.demo.commerce"],
+    authorizedDomains: ["openagenet.local"],
     serviceEndpoint: `http://127.0.0.1:${runtime.serviceAgentPort}/agent/invoke`,
     label: "Demo Service Agent",
     description: "Service Agent used by the OAN visual demo.",
@@ -850,7 +851,8 @@ async function runServiceAgentScenario(context: DemoContext, bus: DemoEventBus):
     metadata: {
       name: "Demo Service Agent",
       description: "Visual demo Service Agent registration",
-      capabilityTags: ["openagenet.local", "trusted-demo", "gbt4754-2017.01"],
+      capabilityTags: ["openagenet.local", "trusted-demo", "domain.demo.commerce"],
+      authorizedDomains: ["openagenet.local"],
     },
   });
   const demoResource = toDemoResource(resource.did, "agent_service", "Demo Service Agent", ["openagenet.local", "trusted-demo"], "created");
@@ -883,6 +885,7 @@ async function runMixedFourScenario(context: DemoContext, bus: DemoEventBus): Pr
         name: resource.didDocument.oanMetadata.resourceDescription.name,
         description: resource.didDocument.oanMetadata.resourceDescription.description,
         capabilityTags: resource.didDocument.oanMetadata.capabilityTags,
+        authorizedDomains: resource.didDocument.oanMetadata.authorizedDomains,
       },
     });
     const demoResource = toDemoResource(
@@ -945,6 +948,7 @@ async function runMixed1000Scenario(context: DemoContext, bus: DemoEventBus): Pr
           name: `Pressure ${type} ${index}`,
           description: `OAN demo pressure resource ${index}`,
           capabilityTags: ["openagenet.local", "pressure-demo", `resource-${index % 20}`, type],
+          authorizedDomains: resource.didDocument.oanMetadata.authorizedDomains,
         },
       });
       await postJson(`http://127.0.0.1:${runtime.registrarPorts[registrarIndex]}/resources/register`, registration, { timeoutMs: 180_000 });
@@ -1185,6 +1189,7 @@ function createTypedResource(type: ResourceType, index: number): ReturnType<type
     semanticCode: semantic,
     resourceType: type,
     capabilityTags: ["openagenet.local", "mixed-demo", type, `resource-${index % 12}`],
+    authorizedDomains: ["openagenet.local"],
     serviceEndpoint: `http://127.0.0.1:${9600 + index}/resource/${type}`,
     label: `Demo ${type} ${index}`,
     description: `OAN visual demo ${type} resource.`,

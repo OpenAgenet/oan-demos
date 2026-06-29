@@ -14,8 +14,7 @@
   "governanceResult": "active",
   "endpoint": "https://discovery-1.genesis.openagenet.local",
   "authorizedDomains": [
-    "genesis.openagenet.local",
-    "openagenet.local"
+    "*"
   ],
   "note": "This normalized did:oan infrastructure DID has been authorized by chain governance. Full infrastructure authorization still requires the Root-issued VC to verify.",
   "createDigest": "HssQRmZkuJQVr94K3xBkXiaT6Xo6igBtTLR4ogehg79o",

@@ -377,7 +377,7 @@ export async function waitForHttpHealth(name: string, port: number, timeoutMs = 
 }
 
 export function createAndPersistDemoService(workDir: string, endpoint: string, options: { draftId: string; source: string; tags?: string[] }): RegisteredDemoResource {
-  const tags = options.tags ?? ["gbt4754-2017.01"];
+  const tags = options.tags ?? ["domain.demo.service"];
   const identity = createResourceIdentity({
     semanticCode: "AGDM",
     resourceType: "agent_service",
@@ -440,7 +440,7 @@ export async function registerAndWaitForDiscovery(
   return registrarResponse;
 }
 
-export async function queryDemoService(discoveryPort: number, tags = ["gbt4754-2017.01"]): Promise<any> {
+export async function queryDemoService(discoveryPort: number, tags = ["domain.demo.service"]): Promise<any> {
   const response = await postJson<any>(
     `http://127.0.0.1:${discoveryPort}/discovery/resources/query`,
     {

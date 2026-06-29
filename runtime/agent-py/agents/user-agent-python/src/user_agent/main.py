@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2026 OpenAgenet contributors
+# Copyright (c) 2026 OpenAgenet contributors
 #
 # Initial author: JINLIANG XU
 # Email: jlxufly@gmail.com
@@ -353,7 +353,7 @@ def endpoint_base(service_endpoint: str) -> str:
 def main() -> None:
     user_did_document = load_json(USER_DID_DOCUMENT)
     query = {
-        "capabilityTags": ["gbt4754-2017.01"],
+        "capabilityTags": ["domain.demo.service"],
         "resourceType": "agent_service",
         "protocol": "http",
         "limit": 1,

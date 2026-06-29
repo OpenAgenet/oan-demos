@@ -49,8 +49,8 @@ Every scenario starts a real local OAN topology:
 - 1 NATS JetStream on port `4522`
 - optional Python Service Agent on port `9001`
 
-Node identities are copied from bundled genesis fixtures. Discovery authorized
-domains remain `genesis.openagenet.local` and `openagenet.local`.
+Node identities are copied from bundled genesis fixtures. Genesis Registrar and
+Discovery nodes use explicit all-domain authorization: `["*"]`.
 
 ## Scenarios
 

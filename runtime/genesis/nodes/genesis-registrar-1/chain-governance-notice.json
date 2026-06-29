@@ -13,7 +13,9 @@
   "eventSequence": 17,
   "governanceResult": "active",
   "endpoint": "https://registrar-1.genesis.openagenet.local",
-  "authorizedDomains": [],
+  "authorizedDomains": [
+    "*"
+  ],
   "note": "This normalized did:oan infrastructure DID has been authorized by chain governance. Full infrastructure authorization still requires the Root-issued VC to verify.",
   "createDigest": "SE2vUPsUM1AZdjfB7JHG2gqg2dwmZiqggncTDhgnE5U",
   "voteDigests": [

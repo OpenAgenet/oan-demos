@@ -7,8 +7,7 @@
   "targetAddress": "0xe8fdbd6f07937c828bae5a5ab135502571e6f846e1d2d4e8d54f15d61e335958",
   "endpoint": "https://discovery-1.genesis.openagenet.local",
   "authorizedDomains": [
-    "genesis.openagenet.local",
-    "openagenet.local"
+    "*"
   ],
   "status": "active",
   "network": "sui-mainnet",

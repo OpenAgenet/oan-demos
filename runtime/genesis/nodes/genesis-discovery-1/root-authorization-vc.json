@@ -16,8 +16,7 @@
     "subjectType": 2,
     "endpoint": "https://discovery-1.genesis.openagenet.local",
     "authorizedDomains": [
-      "genesis.openagenet.local",
-      "openagenet.local"
+      "*"
     ],
     "didDocumentFile": "did-document.json"
   },

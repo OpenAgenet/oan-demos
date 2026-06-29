@@ -15,7 +15,9 @@
     "role": "registrar",
     "subjectType": 1,
     "endpoint": "https://registrar-2.genesis.openagenet.local",
-    "authorizedDomains": [],
+    "authorizedDomains": [
+      "*"
+    ],
     "didDocumentFile": "did-document.json"
   },
   "credentialStatus": {

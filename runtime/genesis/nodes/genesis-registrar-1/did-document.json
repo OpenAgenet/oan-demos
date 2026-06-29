@@ -88,7 +88,9 @@
         "value": "0x50c1bf938eb0621665ea555e2e8a3ac2debd902e47139a54cd42b19c12d2e44c"
       }
     ],
-    "authorizedDomains": [],
+    "authorizedDomains": [
+      "*"
+    ],
     "servicePolicy": "private-genesis-infrastructure-service",
     "networkScope": "sui-mainnet-genesis",
     "lifecycleState": "active",

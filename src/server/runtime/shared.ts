@@ -212,6 +212,7 @@ export interface ResourceIdentityOptions {
   semanticCode: string;
   resourceType: DiscoverableResourceType;
   capabilityTags: string[];
+  authorizedDomains?: string[];
   serviceEndpoint?: string;
   label: string;
   description?: string;
@@ -1370,6 +1371,7 @@ export function createResourceIdentity(options: ResourceIdentityOptions): Identi
   const protocol = options.protocol ?? (serviceEndpoint.startsWith("mcp:") ? "mcp" : new URL(serviceEndpoint).protocol.replace(":", ""));
   const serviceType = options.serviceType ?? defaultResourceServiceType(options.resourceType);
   const serviceVersion = options.serviceVersion ?? "1.0.0";
+  const authorizedDomains = options.authorizedDomains ?? ["openagenet.local"];
   const service =
     options.resourceType === "skill" && !options.serviceEndpoint
       ? []
@@ -1417,6 +1419,7 @@ export function createResourceIdentity(options: ResourceIdentityOptions): Identi
     ttl: 300,
     resourceDescription,
     capabilityTags: options.capabilityTags,
+    authorizedDomains,
     protocolBindings,
     implementationLinks: [],
     credentialRequirements: [],
@@ -1587,6 +1590,10 @@ export function buildResourceRegistrationFixture(
       options.metadata?.capabilityTags ??
       identity.didDocument.oanMetadata?.capabilityTags ??
       [],
+    authorizedDomains:
+      options.metadata?.authorizedDomains ??
+      identity.didDocument.oanMetadata?.authorizedDomains ??
+      [],
     lifecycleState: options.metadata?.lifecycleState ?? "active",
     ...options.metadata,
   };
@@ -1605,6 +1612,9 @@ export function buildResourceRegistrationFixture(
       (Array.isArray(oanMetadata.capabilityTags) && oanMetadata.capabilityTags.length > 0
         ? oanMetadata.capabilityTags
         : resourceDescription?.capabilityTags ?? []),
+    authorizedDomains:
+      metadataInput.authorizedDomains ??
+      (Array.isArray(oanMetadata.authorizedDomains) ? oanMetadata.authorizedDomains : []),
     protocolBindings: (oanMetadata.protocolBindings ?? []).map(serializeProtocolBindingForRust),
     services: (identity.didDocument.service ?? []).map(serializeServiceEndpointForRust),
     lifecycleState: metadataInput.lifecycleState ?? oanMetadata.lifecycleState ?? "active",

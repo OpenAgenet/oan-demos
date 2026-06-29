@@ -89,8 +89,7 @@
       }
     ],
     "authorizedDomains": [
-      "genesis.openagenet.local",
-      "openagenet.local"
+      "*"
     ],
     "servicePolicy": "private-genesis-infrastructure-service",
     "networkScope": "sui-mainnet-genesis",
