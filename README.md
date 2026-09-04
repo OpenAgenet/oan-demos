@@ -7,10 +7,14 @@
 
 # OAN Demos
 
-Local visual demos for OpenAgenet / OAN. The repository is self-contained for
-normal demonstration use: it includes the demo UI, demo server, OAN node
-executables, NATS, genesis identities, fixtures, and the Python agent code under
-`runtime/`.
+Local visual demos for OpenAgenet (OAN), an open infrastructure project for the
+Internet of Agents (IoA). The repository is self-contained for normal
+demonstration use: it includes the demo UI, demo server, OAN node executables,
+NATS, genesis identities, fixtures, and the Python agent code under `runtime/`.
+
+The demos are for showing the complete resource lifecycle locally: registration,
+Root verification, CDN publication, Discovery indexing, semantic discovery, and
+mutual verification before a trusted Service Agent invocation.
 
 For a full setup guide, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
