@@ -2235,6 +2235,7 @@ keys_dir = "../root/keys"
 bulletin_file = "../root/bulletin.json"
 authorization_state_file = "../root/authorization-state.json"
 request_nonce_file = "../root/request-nonces.json"
+controller_authorization_nonce_file = "../root/controller-authorization-nonces.json"
 capability_tree_file = "${docsTree.replaceAll("\\", "\\\\")}"
 database_url = "${benchmarkDatabaseUrl("../root/root.db", "oan_bench_root")}"
 `.trim(),
