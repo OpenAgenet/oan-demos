@@ -238,6 +238,7 @@ export interface ResourceRegistrationFixture {
   hashAlgorithm: string;
   registrationCredential: Record<string, any>;
   subjectControlProof: Record<string, any>;
+  controllerAuthorizationProof?: Record<string, any>;
 }
 
 export interface InfrastructureIdentityOptions {
@@ -1633,6 +1634,24 @@ export function buildResourceRegistrationFixture(
     metadataHash,
     hashAlgorithm: "sha256",
   });
+  const controllerChallenge = {
+    challengeId: `${options.draftId}-controller-authorization`,
+    resourceDid: identity.did,
+    controllerDid: identity.did,
+    publisherDid: oanMetadata.publisherDid === identity.did ? identity.did : undefined,
+    didDocumentHash,
+    metadataHash,
+    registrarDid: options.registrarDid ?? "did:oan:AGRG:local-benchmark-registrar",
+    purpose: "resource-registration-controller-authorization",
+    verificationMethod: identity.keyId,
+    nonce: crypto.randomBytes(16).toString("hex"),
+    issuedAt,
+    expiresAt: new Date(Date.now() + 300_000).toISOString(),
+  };
+  const controllerProof = {
+    ...buildProof(controllerChallenge, identity),
+    proofPurpose: "capabilityInvocation",
+  };
   return {
     resourceDid: identity.did,
     resourceType,
@@ -1654,7 +1673,27 @@ export function buildResourceRegistrationFixture(
       verifiedVerificationMethod: identity.keyId,
       proofHash: prefixedSha256(proof),
     },
+    controllerAuthorizationProof: {
+      challenge: controllerChallenge,
+      controllerDidDocument: publicDidDocumentSnapshot(identity),
+      proof: controllerProof,
+    },
   };
+}
+
+function publicDidDocumentSnapshot(identity: IdentityMaterial): Record<string, any> {
+  return JSON.parse(JSON.stringify(identity.didDocument, (key, value) => {
+    if (
+      key === "privateKeyJwk" ||
+      key === "privateKeyMultibase" ||
+      key === "privateKeyBase58" ||
+      key === "privateKeyHex" ||
+      key === "d"
+    ) {
+      return undefined;
+    }
+    return value;
+  }));
 }
 
 export function persistIdentityMaterial(dataDir: string, identity: IdentityMaterial): IdentityMaterial {
