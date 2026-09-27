@@ -32,6 +32,11 @@ function Copy-RequiredDirectory {
 
 New-Item -ItemType Directory -Force -Path $BinRoot | Out-Null
 
+$LegacyGenesisNodes = Join-Path $RuntimeRoot 'genesis\nodes'
+if (Test-Path -LiteralPath $LegacyGenesisNodes) {
+  throw "Remove $LegacyGenesisNodes before syncing. Genesis infrastructure private identity material must stay in the private oan-design-docs\genesis\nodes baseline and must not be bundled into oan-demos."
+}
+
 Copy-RequiredFile (Join-Path $WorkspaceRoot 'oan-root-services\target\release\root-node.exe') (Join-Path $BinRoot 'root-node.exe')
 Copy-RequiredFile (Join-Path $WorkspaceRoot 'oan-root-services\target\release\cdn-node.exe') (Join-Path $BinRoot 'cdn-node.exe')
 Copy-RequiredFile (Join-Path $WorkspaceRoot 'oan-root-services\target\release\cdn-publisher.exe') (Join-Path $BinRoot 'cdn-publisher.exe')
@@ -43,7 +48,6 @@ Copy-RequiredDirectory (Join-Path $WorkspaceRoot 'oan-examples\fixtures\root') (
 Copy-RequiredDirectory (Join-Path $WorkspaceRoot 'oan-examples\fixtures\user-agent') (Join-Path $RuntimeRoot 'fixtures\user-agent')
 Copy-RequiredDirectory (Join-Path $WorkspaceRoot 'oan-examples\fixtures\demo-service-agent') (Join-Path $RuntimeRoot 'fixtures\demo-service-agent')
 Copy-RequiredDirectory (Join-Path $WorkspaceRoot 'oan-examples\fixtures\docs') (Join-Path $RuntimeRoot 'fixtures\docs')
-Copy-RequiredDirectory (Join-Path $WorkspaceRoot 'oan-design-docs\genesis\nodes') (Join-Path $RuntimeRoot 'genesis\nodes')
 Copy-RequiredDirectory (Join-Path $WorkspaceRoot 'oan-agent-py') (Join-Path $RuntimeRoot 'agent-py')
 
 $NestedGit = Join-Path $RuntimeRoot 'agent-py\.git'

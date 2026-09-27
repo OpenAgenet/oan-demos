@@ -43,8 +43,7 @@ export const trustIndexerRoot =
 export const designDocsRoot =
   process.env.OAN_DESIGN_DOCS_ROOT ?? path.join(workspaceRoot, "oan-design-docs");
 export const genesisNodesRoot =
-  process.env.OAN_GENESIS_NODES_ROOT ??
-  (useBundledRuntime ? path.join(bundledRuntimeRoot, "genesis", "nodes") : path.join(designDocsRoot, "genesis", "nodes"));
+  process.env.OAN_GENESIS_NODES_ROOT ?? path.join(designDocsRoot, "genesis", "nodes");
 export const adminToken = process.env.OAN_ADMIN_TOKEN ?? "local-dev-admin-token";
 export const benchmarkDatabaseBackend =
   (process.env.OAN_BENCH_DB_BACKEND ?? "postgres").trim().toLowerCase();

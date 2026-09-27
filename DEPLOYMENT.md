@@ -20,7 +20,6 @@ oan-demos\
   runtime\
     bin\win32-x64\
     fixtures\
-    genesis\nodes\
     agent-py\
 ```
 
@@ -62,7 +61,7 @@ sets these defaults automatically:
 OAN_DEMOS_USE_BUNDLED_RUNTIME=true
 OAN_EXAMPLES_ROOT=<oan-demos>
 OAN_EXAMPLES_FIXTURES_ROOT=<oan-demos>\runtime\fixtures
-OAN_GENESIS_NODES_ROOT=<oan-demos>\runtime\genesis\nodes
+OAN_GENESIS_NODES_ROOT=<workspace>\oan-design-docs\genesis\nodes
 OAN_AGENT_PY_ROOT=<oan-demos>\runtime\agent-py
 OAN_NATS_SERVER_PATH=<oan-demos>\runtime\bin\win32-x64\nats-server.exe
 OAN_BENCH_DB_BACKEND=postgres
@@ -76,6 +75,12 @@ configure it in the same shell:
 ```powershell
 $env:PGPASSWORD = "<your-postgres-password>"
 ```
+
+`OAN_GENESIS_NODES_ROOT` is intentionally outside this repository by default.
+Infrastructure DID Documents, private keys, and Root-issued authorization VCs
+are authoritative only in the private `oan-design-docs\genesis\nodes`
+baseline. Do not copy or commit those private identity materials into
+`oan-demos\runtime`.
 
 ## 4. Install Node Dependencies
 
@@ -99,7 +104,7 @@ Check bundled runtime files:
 ```powershell
 Test-Path .\runtime\bin\win32-x64\root-node.exe
 Test-Path .\runtime\bin\win32-x64\nats-server.exe
-Test-Path .\runtime\genesis\nodes\genesis-root
+Test-Path ..\oan-design-docs\genesis\nodes\genesis-root
 ```
 
 ## 6. Start the Demo
@@ -171,13 +176,11 @@ The UI currently exposes these main scenarios:
 - `1000 Mixed`: high-concurrency registration, Root publication, CDN sync, and
   Discovery indexing for 1000 mixed resources.
 
-Genesis infrastructure node identities are copied from
-`runtime\genesis\nodes`. Discovery authorized domains remain:
-
-```text
-genesis.openagenet.local
-openagenet.local
-```
+Genesis infrastructure node identities are loaded from
+`OAN_GENESIS_NODES_ROOT`, which should point to the private
+`oan-design-docs\genesis\nodes` baseline. Scenario runs copy the required
+identity material into their temporary run directories only; those generated
+copies must not be committed.
 
 ## 10. Smoke Test
 
